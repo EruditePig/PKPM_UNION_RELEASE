@@ -1,0 +1,8 @@
+http://www.cnblogs.com/landeanfen/p/5007400.html
+http://webpy.org/docs/0.3/tutorial#urlhandling
+http://webpy.org/cookbook/storeupload/
+http://plugins.krajee.com/file-input#options
+https://zhuanlan.zhihu.com/p/23908279
+http://www.cnblogs.com/wuhuacong/p/4774396.html
+http://blog.csdn.net/dlf123321/article/details/51094402
+http://blog.csdn.net/u012639466/article/details/53773687

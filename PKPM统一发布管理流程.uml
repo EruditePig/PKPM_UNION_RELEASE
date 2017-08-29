@@ -1,0 +1,90 @@
+@startuml 当不存在任何版本也不存在配置文件表时上传一个配置文件表
+
+Front -> index : 主页
+index -> DB : 是否存在任何版本
+DB -> index : 版本列表为空
+index -> DB : 是否存在配置文件表
+DB -> index : 不存在任何配置文件表
+index -> Front : 上传一个配置文件表
+
+@enduml
+
+@startuml 当不存在任何版本但有配置文件时按配置文件上传版本
+
+participant "Front" as A
+participant "index" as B
+participant "DB" as C
+participant "upload_first_version" as D
+
+A -> B : 主页
+B -> C : 是否存在任何版本
+C -> B : 版本列表为空
+B -> C : 是否存在配置文件表
+C -> B : 有一个
+B -> C : 给我这个配置文件表
+C -> B : 给你
+B -> A : 按照这个配置文件表上传文件
+A -> A : 要求用户必须上传配置文件表中所有文件，以形成版本
+A -> D : 上传配置文件表里的文件
+D -> C : 新建版本，按照配置文件表
+
+@enduml
+
+@startuml 统一发布流程
+
+participant "内网上传者" as A
+participant "内网服务器" as B
+participant "外网服务器" as D
+participant "外网下载者" as A
+participant "李守功" as C
+participant "黄立新" as F
+
+
+A -> B : 登陆
+A -> B : 上传
+B -> A : 返回γ版本号(待测试版)
+
+B -> D : 同步
+
+A -> D : 提供版本号，获取
+
+C -> D : 标记某γ版本为β版本(待压盘版)
+
+F -> D : 获取某个待压盘版，压盘，标记为α版本(发行版)
+
+@enduml
+
+@startuml 内网上传文件时序图
+
+participant "网页前端" as A
+participant "upload" as E
+participant "pkpm_version_manage" as B
+participant "login" as C
+participant "数据库" as D
+
+
+A -> E : 获取版本列表
+E -> B : 获取版本列表
+B -> D : 获取版本列表
+
+A -> E : 登录
+E -> C : 验证登录
+C -> D : 从数据库读取用户账户信息
+E -> D : 获取该用户负责的文件列表
+E -> A : 显示文件列表
+
+A -> E : 指定父版本，上传文件
+E -> B : 指定父版本，上传文件
+B -> D : 基于父版本获得\n新版本的配置文件
+B -> B : 计算出新版文件列表
+B -> D : 储存新版信息
+
+@enduml
+
+@startuml version_manage
+
+class version_manage{
+    + (bool,ver_id) add_version(parent_ver_id, filelist)     // 父版本号，文件列表，返回该版本号
+}
+
+@enduml

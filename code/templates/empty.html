@@ -1,0 +1,81 @@
+$def with (host)
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <script src="/static/js/jquery/jquery-3.2.1.js"></script>
+
+    <script src="/static/js/bootstrap/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/static/js/bootstrap/css/bootstrap.min.css">
+
+    <script src="/static/js/bootstrap-table/bootstrap-table.js"></script>
+    <link rel="stylesheet" href="/static/js/bootstrap-table/bootstrap-table.css">
+
+
+    <script>
+        // OnLoad
+        $$(document).ready(function() {
+            window.config = [];
+            window.save_config_url = $$('#server_host').text() + "/save_first_config";
+            
+            $$('#upload').click(function (e) {
+                upload_config();
+            });
+        });
+
+        // 选择配置文件
+        function select_config_file() {
+            var selectedFile = event.target.files[0];
+            var reader = new FileReader();
+            reader.onload = function (event) {
+                try {
+                    window.config = $$.parseJSON(event.target.result);
+                    show_config();
+                } catch (e) {
+                    alert("解析配置文件失败！");
+                }
+            };
+            reader.readAsText(selectedFile);
+        }
+        // 展示配置文件
+        function show_config() {
+            $$('#table1').bootstrapTable({  
+                columns: [  
+                    { field: 'Path', title: 'Path' },  
+                    { field: 'Group', title: 'Group' },  
+                ],
+                data : window.config,
+            }); 
+        }
+        // 上传配置文件
+        function upload_config(){
+            $$.post(window.save_config_url, {action:"save_config", config:JSON.stringify(window.config)})  
+            .done(function(result)
+            {  
+                alert(result == "success" ? "保存配置成功" : result);
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <div id="server_host" style="display:none;">$host</div>
+    <div class="container">
+        <div id="toolbar" class="btn-group" role="group" >
+            <label class="btn btn-default">
+                选择配置文件 <input type="file" onchange="select_config_file(this.files)" style="display:none;">
+            </label>
+            <button id="upload" class="btn btn-primary">
+                上传
+            </button>
+        </div>
+
+        <table id="table1" data-classes="table table-hover " data-search="false" data-show-refresh="false" data-show-toggle="false"
+            data-show-columns="false">
+        </table>
+    </div>
+</body>
+
+</html>
