@@ -16,7 +16,7 @@ class save_first_config:
             config = eval(parsed_data.get('config')[0])
             if config:
                 try:
-                    db = DBWrapper(dbname)
+                    db = DBWrapper(dbpath)
                     db.create_config_table("abcsd")
                     for item in config:
                         db.insert_to_config_table("abcsd", item["Path"], item["Group"])

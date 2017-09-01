@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <script src="/static/js/jquery/jquery-3.2.1.js"></script>
+
+    <script src="/static/js/bootstrap/js/bootstrap.js"></script>
+    <link rel="stylesheet" href="/static/js/bootstrap/css/bootstrap.css">
+
+    <script src="/static/js/bootstrap-table/bootstrap-table.js"></script>
+    <link rel="stylesheet" href="/static/js/bootstrap-table/bootstrap-table.css">
+
+    <script src="/static/js/bootstrap-fileinput/js/fileinput.js"></script>
+    <link rel="stylesheet" href="/static/js/bootstrap-fileinput/css/fileinput.css">
+
+    <script>
+        // OnLoad
+        $$(document).ready(function() {
+            window.config = [];     // 配置文件
+            window.mark = {};   // 标记配置列表中的文件是不是在上传文件夹里
+            window.url = "/upload_new_version";
+            
+            // 请求配置文件列表
+            $$.post(window.url, {action:"request_config", key:""})  
+            .done(function(result)
+            {  
+                var ret = JSON.parse(result);
+                if(ret["state"] == "success"){
+                    window.config = ret["config"];
+                    // 解析配置文件里的路径
+                    for(var i = 0;i < window.config.length; i++) {
+                        window.config[i]["PATH"] = window.config[i]["PATH"].split("\\").join('/');
+                        window.mark[window.config[i]["PATH"]] = false;
+                    }
+                    show_config();  // 展示配置文件
+                }
+                else{
+                    alert("获取配置失败！" + ret["info"]);
+                }
+            });
+            
+            // 初始化上传文件控件
+            $$("#input-id").fileinput({
+                "showPreview" : true,
+                "uploadUrl" : window.url,
+                "allowedPreviewTypes" : [],
+                //"maxFileCount" : 1,
+                // "filePathFilter" : function (filepath, filename) {
+                //     if (filepath in window.mark){
+                //         window.mark[filepath] = true;
+                //         return true;
+                //     }
+                //     else{
+                //         return false;
+                //     }
+                // },
+            })
+            .on('filebatchselected', function(event, files) {
+                console.log('File batch selected triggered');
+                // for (var key in window.mark) {
+                //     // skip loop if the property is from prototype
+                //     if (!window.mark.hasOwnProperty(key)) continue;
+                //     window.mark[key] = false;
+                // }
+                show_config();
+            })
+            // browse button点击确定之后响应
+            .on('change', function(event) {
+                // console.log("change");
+                // var filesCount = $$('#input-id').fileinput('getFilesCount'); // returns count of files
+                // console.log(filesCount);
+            })
+            // 加载一个个文件时的消息
+            .on('fileloaded', function(event, file, previewId, index, reader) {
+                // console.log(file.webkitRelativePath + " loaded");
+            })
+            // 上传一个文件，开始AJAX之前
+            .on('filepreajax', function(event, previewId, index) {
+                // var files = $$('#input-id').fileinput('getFileStack');
+                // window.extra_data = {filepath : files[index].webkitRelativePath};
+                // console.log('File pre ajax triggered');
+            })
+            // 上传一个文件，开始AJAX之前
+            .on('filebatchuploadcomplete', function(event, data, previewId, index) {
+                console.log('File batch upload complete');
+                $$.post(window.url, {action:"upload_complete", key:""})  
+                .done(function(result)
+                {  
+                    var ret = JSON.parse(result);
+                    if(ret["state"] == "success"){
+                        window.config = ret["config"];
+                        // 解析配置文件里的路径
+                        for(var i = 0;i < window.config.length; i++) {
+                            window.config[i]["PATH"] = window.config[i]["PATH"].split("\\").join('/');
+                            window.mark[window.config[i]["PATH"]] = false;
+                        }
+                        show_config();  // 展示配置文件
+                    }
+                    else{
+                        alert("获取配置失败！" + ret["info"]);
+                    }
+                });
+            });
+        });
+
+        // 展示配置
+        function show_config(){
+            $$("#table1").bootstrapTable("destroy");
+            $$('#table1').bootstrapTable({  
+                columns: [  
+                    { field: 'PATH', title: 'Path' },  
+                    { field: 'PROJECT_GROUP_NAME', title: 'Group' },  
+                    { field: 'MD5_SIZE_SERVER', title: 'MD5和大小(服务器)' },   
+                    { field: 'MD5_SIZE_LOCAL', title: 'MD5和大小(本地)' }, 
+                ],
+                data : window.config,
+                rowStyle: function (row, index) {
+                    //这里有5个取值代表5种颜色['active', 'success', 'info', 'warning', 'danger'];
+                    if(window.mark[row["PATH"]] == true){
+                        return { classes: 'danger' };
+                    }
+                    else{
+                        return {};
+                    }
+                },
+            }); 
+        }
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <div id="toolbar" class="btn-group" role="group" >
+            <label class="control-label">选择包含以下文件的目录进行上传</label>
+                <input id="input-id" name="input_files" class="file-loading" type="file" multiple webkitdirectory />
+            </button>
+        </div>
+
+        <table id="table1" data-classes="table table-hover " data-search="false" data-show-refresh="false" data-show-toggle="false"
+            data-show-columns="false">
+        </table>
+    </div>
+</body>
+
+</html>

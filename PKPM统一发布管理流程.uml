@@ -1,3 +1,15 @@
+@startuml 新版本提交
+participant "Front" as A
+participant "new_version" as B
+participant "version_manager" as C
+
+B -> A : 可上传文件列表及文件的HASH值
+A -> A : 验证用户上传文件，有新加的文件就必须上传
+A -> B : 上传文件
+B -> C : 形成新版本
+
+@enduml
+
 @startuml 当不存在任何版本也不存在配置文件表时上传一个配置文件表
 
 Front -> index : 主页

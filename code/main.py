@@ -12,10 +12,14 @@ import global_var
 # 具体分发类
 from index import *
 from save_first_config import *
+from upload_first_version import *
+from upload_new_version import * 
 
 urls = (
     '/','index',
     '/save_first_config','save_first_config',
+    '/upload_first_version','upload_first_version',
+    '/upload_new_version', 'upload_new_version',
 )
 
 app = web.application(urls, globals())

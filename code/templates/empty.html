@@ -1,4 +1,3 @@
-$def with (host)
 <!DOCTYPE html>
 <html lang="en">
 
@@ -18,7 +17,7 @@ $def with (host)
         // OnLoad
         $$(document).ready(function() {
             window.config = [];
-            window.save_config_url = $$('#server_host').text() + "/save_first_config";
+            window.save_config_url = "/save_first_config";
             
             $$('#upload').click(function (e) {
                 upload_config();
@@ -61,7 +60,6 @@ $def with (host)
 </head>
 
 <body>
-    <div id="server_host" style="display:none;">$host</div>
     <div class="container">
         <div id="toolbar" class="btn-group" role="group" >
             <label class="btn btn-default">
