@@ -1,6 +1,23 @@
+@startuml 提交文件后服务器新建版本
+
+participant "Front" as A
+participant "upload_new_version" as B
+participant "dbwrapper" as C
+participant "file_disk_manager" as D
+
+A -> B : 上传文件完成
+B -> C : 创建新版本，args:父版本,[{filepath,hash,size}]
+C -> B : 创建新版本并留下这些文件, return:版本号,留下的[filepath]
+B -> D : 留下的文件在磁盘上管理
+D -> B : 管理的结果
+B -> B : 清空临时文件夹，清空全局变量
+B -> A : 给前端展示新建版本的结果
+
+@enduml
+
 @startuml 新版本提交
 participant "Front" as A
-participant "new_version" as B
+participant "upload_new_version" as B
 participant "version_manager" as C
 
 B -> A : 可上传文件列表及文件的HASH值

@@ -88,19 +88,19 @@
                 $$.post(window.url, {action:"upload_complete", key:""})  
                 .done(function(result)
                 {  
-                    var ret = JSON.parse(result);
-                    if(ret["state"] == "success"){
-                        window.config = ret["config"];
-                        // 解析配置文件里的路径
-                        for(var i = 0;i < window.config.length; i++) {
-                            window.config[i]["PATH"] = window.config[i]["PATH"].split("\\").join('/');
-                            window.mark[window.config[i]["PATH"]] = false;
-                        }
-                        show_config();  // 展示配置文件
-                    }
-                    else{
-                        alert("获取配置失败！" + ret["info"]);
-                    }
+                    // var ret = JSON.parse(result);
+                    // if(ret["state"] == "success"){
+                    //     window.config = ret["config"];
+                    //     // 解析配置文件里的路径
+                    //     for(var i = 0;i < window.config.length; i++) {
+                    //         window.config[i]["PATH"] = window.config[i]["PATH"].split("\\").join('/');
+                    //         window.mark[window.config[i]["PATH"]] = false;
+                    //     }
+                    //     show_config();  // 展示配置文件
+                    // }
+                    // else{
+                    //     alert("获取配置失败！" + ret["info"]);
+                    // }
                 });
             });
         });
