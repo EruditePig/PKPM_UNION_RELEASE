@@ -12,8 +12,6 @@ import time
 
 class DBWrapper(object):
     """数据库Wrapper"""
-    STAFF_DEL = "DEL"
-    STAFF_NORMAL = "NORMAL"
 
     # 版本列表
     VERSION_LIST = "VERSION_LIST"
@@ -34,10 +32,12 @@ class DBWrapper(object):
 
     # 用户列表
     STAFF = "STAFF"
-    STAFF_ID = "ID"                                     # INTEGER PRIMARY KEY NOT NULL
-    STAFF_NAME = "NAME"                                 # TEXT NOT NULL
+    STAFF_ID = "STAFF_ID"                                     # INTEGER PRIMARY KEY NOT NULL
+    STAFF_NAME = "STAFF_NAME"                                 # TEXT NOT NULL
     STAFF_PROJECT_GROUP_NAME = "PROJECT_GROUP_NAME"     # TEXT NOT NULL
-    STAFF_STATE = "STATE"                               # TEXT NOT NULL
+    STAFF_STATE = "STAFF_STATE"                               # TEXT NOT NULL
+    STAFF_DEL = "DEL"
+    STAFF_NORMAL = "NORMAL"
 
     # 配置记录表
     CONFIG_CREATE_LOG = "CONFIG_CREATE_LOG"
@@ -48,17 +48,17 @@ class DBWrapper(object):
 
     # 具体配置
     CONFIG_DETAIL = "CONFIG_"
-    CONFIG_PATH = "PATH"                                # TEXT PRIMARY KEY NOT NULL
-    CONFIG_HASH = "HASH"                                # TEXT NOT NULL
+    CONFIG_PATH = "FILEPATH"                                # TEXT PRIMARY KEY NOT NULL
+    CONFIG_HASH = "FILEHASH"                                # TEXT NOT NULL
     CONFIG_FILESIZE = "FILESIZE"                        # INTEGER NOT NULL
     CONFIG_PROJECT_GROUP_NAME = "PROJECT_GROUP_NAME"    # TEXT NOT NULL
 
     # 版本信息表
     VERSION_DETAIL = "VERSION_"
-    VERSION_DETAIL_PATH = "PATH"                        # TEXT PRIMARY KEY NOT NULL
-    VERSION_DETAIL_HASH = "HASH"                        # TEXT NOT NULL
+    VERSION_DETAIL_PATH = "FILEPATH"                        # TEXT PRIMARY KEY NOT NULL
+    VERSION_DETAIL_HASH = "FILEHASH"                        # TEXT NOT NULL
     VERSION_DETAIL_FILESIZE = "FILESIZE"                # INTEGER NOT NULL
-    VERSION_DETAIL_STATE = "STATE"                      # TEXT NOT NULL
+    VERSION_DETAIL_STATE = "FILESTATE"                      # TEXT NOT NULL
     FILE_ADD = "ADD"
     FILE_DEL = "DEL"
     FILE_MOD = "MOD"
@@ -70,6 +70,10 @@ class DBWrapper(object):
         self.db_name = db_name
         self.conn = sqlite3.connect(self.db_name)
         self.conn.row_factory = sqlite3.Row     # row获取的时候为字典
+
+        # 保证以下TABLE永远是存在的
+        self.create_version_list_table()
+        self.create_config_create_log_table()
 
     def __del__(self):
         self.conn.close()
@@ -117,7 +121,6 @@ class DBWrapper(object):
                                                 DBWrapper.VERSION_LIST_VER_TYPE,        # {7}该版本类型
                                                 DBWrapper.VERSION_LIST_DESCRIPTION      # {8}版本描述信息
                                                 )
-        print stmt
         c.execute(stmt)
         self.conn.commit()
 

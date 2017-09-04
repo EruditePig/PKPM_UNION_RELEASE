@@ -2083,8 +2083,6 @@
             };
             formdata.append(self.uploadFileAttr, self.filestack[i], self.filenames[i]);
             formdata.append('file_id', i);
-            formdata.append('filepath', self.filestack[i].webkitRelativePath);
-            formdata.append('filename', self.filenames[i]);
             self._ajaxSubmit(fnBefore, fnSuccess, fnComplete, fnError, previewId, i);
         },
         _uploadBatch: function () {

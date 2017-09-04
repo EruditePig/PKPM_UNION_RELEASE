@@ -24,38 +24,51 @@
             window.url = "/upload_first_version";
             
             // 请求配置文件列表
-            $$.post(window.url, {action:"request_config"})  
-            .done(function(result)
-            {  
-                var ret = JSON.parse(result);
-                if(ret["state"] == "success"){
-                    window.config = ret["config"];
-                    // 解析配置文件里的路径
-                    for(var i = 0;i < window.config.length; i++) {
-                        window.config[i]["PATH"] = window.config[i]["PATH"].split("\\").join('/');
-                        window.mark[window.config[i]["PATH"]] = false;
-                    }
-                    show_config();  // 展示配置文件
-                }
-                else{
-                    alert("获取配置失败！" + ret["info"]);
-                }
-            });
+            // $$.post(window.url, {action:"request_config"})  
+            // .done(function(result)
+            // {  
+            //     var ret = JSON.parse(result);
+            //     if(ret["state"] == "success"){
+            //         window.config = ret["config"];
+            //         // 解析配置文件里的路径
+            //         for(var i = 0;i < window.config.length; i++) {
+            //             window.config[i]["PATH"] = window.config[i]["PATH"].split("\\").join('/');
+            //             window.mark[window.config[i]["PATH"]] = false;
+            //         }
+            //         show_config();  // 展示配置文件
+            //     }
+            //     else{
+            //         alert("获取配置失败！" + ret["info"]);
+            //     }
+            // });
             
             // 初始化上传文件控件
             $$("#input-id").fileinput({
                 "showPreview" : false,
                 "uploadUrl" : window.url,
-                //"maxFileCount" : 1,
-                "filePathFilter" : function (filepath, filename) {
-                    if (filepath in window.mark){
-                        window.mark[filepath] = true;
-                        return true;
+                "uploadExtraData" : function(previewId, index){
+                    if (index !== undefined){
+                        var filestack = $$('#input-id').fileinput('getFileStack');
+                        var data = {
+                            "filepath" : filestack[index].webkitRelativePath,
+                            "filename" : filestack[index].name,
+                            "project_group_name" : "建模项目组",
+                        }
+                        return data;
                     }
                     else{
-                        return false;
+                        return {};
                     }
                 },
+                // "filePathFilter" : function (filepath, filename) {
+                //     if (filepath in window.mark){
+                //         window.mark[filepath] = true;
+                //         return true;
+                //     }
+                //     else{
+                //         return false;
+                //     }
+                // },
             })
             .on('filebatchselected', function(event, files) {
                 console.log('File batch selected triggered');
@@ -85,6 +98,7 @@
             // 上传一个文件，开始AJAX之前
             .on('filebatchuploadcomplete', function(event, data, previewId, index) {
                 console.log('File batch upload complete');
+                $$.post(window.url, {action:"upload_complete"})
             });
         });
 
