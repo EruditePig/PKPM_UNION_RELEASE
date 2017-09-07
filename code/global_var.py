@@ -26,6 +26,6 @@ MOD_FILES_FILEHASH = FILEHASH
 MOD_FILES_FILESIZE = FILESIZE
 
 g_new_version = {
-    ADD_FILES : {},
-    MOD_FILES : {}
+    ADD_FILES : [],
+    MOD_FILES : []
 }

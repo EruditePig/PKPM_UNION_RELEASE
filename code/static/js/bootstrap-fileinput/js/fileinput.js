@@ -2688,13 +2688,6 @@
                         return;
                     }
                 }
-                if (self.filePathFilter !== null){
-                    if (self.filePathFilter(file.webkitRelativePath, file.name) == false){
-                        msg = "user defined filter delete " + file.webkitRelativePath;
-                        self.isError = throwError(msg, file, previewId, i);
-                        return;
-                    }
-                }
                 if (fileCount === 0 && !$h.isEmpty(fileExt) && $h.isArray(fileExt) && !$h.isEmpty(fileExtExpr)) {
                     chk = $h.compare(caption, fileExtExpr);
                     fileCount += $h.isEmpty(chk) ? 0 : chk.length;
@@ -3353,6 +3346,11 @@
                     if (f && !f.type && f.size !== undefined && f.size % 4096 === 0) {
                         folders++;
                     } else {
+                        if (self.customFilter !== null){    // add by sjx 20170905 增加根据文件自定义过滤
+                            if (self.customFilter(f) == false){
+                                return;
+                            }
+                        }
                         self._filterDuplicate(f, tfiles, fileIds);
                     }
                 });
@@ -3364,6 +3362,11 @@
                 }
                 if (isAjaxUpload) {
                     $.each(files, function (i, f) {
+                        if (self.customFilter !== null){    // add by sjx 20170905 增加根据文件自定义过滤
+                            if (self.customFilter(f) == false){
+                                return;
+                            }
+                        }
                         self._filterDuplicate(f, tfiles, fileIds);
                     });
                 } else {
@@ -3892,7 +3895,7 @@
         ajaxDeleteSettings: {},
         showAjaxErrorDetails: true,
         retryErrorUploads: true,
-        filePathFilter: null
+        customFilter: null
     };
 
     $.fn.fileinputLocales.en = {

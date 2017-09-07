@@ -1,5 +1,5 @@
-.vscode
-workdir
-dist
-PKPM统一发布管理流程
-*.pyc
+.vscode/
+workdir/
+dist/
+PKPM统一发布管理流程/
+code/*.pyc

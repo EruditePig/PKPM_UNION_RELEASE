@@ -15,70 +15,144 @@
     <script src="/static/js/bootstrap-fileinput/js/fileinput.js"></script>
     <link rel="stylesheet" href="/static/js/bootstrap-fileinput/css/fileinput.css">
 
+    <!-- spark-md5 计算文件MD5值 -->
+    <script src="/static/js/js-spark-md5/spark-md5.js"></script>
+
     <script>
         // OnLoad
         $$(document).ready(function() {
-            window.config = [];     // 配置文件
-            window.mark = {};   // 标记配置列表中的文件是不是在上传文件夹里
+            window.CONST_INDEX_IN_FILELIST = "INDEX_IN_FILELIST";     // 常量字符串
+            window.CONST_FILEPATH = "FILEPATH";      
+            window.CONST_FILEHASH = "FILEHASH";
+            window.CONST_FILESIZE = "FILESIZE";
+            window.CONST_HASFILE  = "HASFILE";
+            window.CONST_FILEHASH_LOCAL = "FILEHASH_LOCAL";
+            window.CONST_FILESIZE_LOCAL = "FILESIZE_LOCAL";
+            window.filedict = {};     // 配置文件，字典管理，filepath为key
+            window.filelist = [];       // 配置文件，list管理
             window.url = "/upload_new_version";
             
-            // 请求配置文件列表
-            $$.post(window.url, {action:"request_config", key:""})  
-            .done(function(result)
-            {  
-                var ret = JSON.parse(result);
-                if(ret["state"] == "success"){
-                    window.config = ret["config"];
-                    // 解析配置文件里的路径
-                    for(var i = 0;i < window.config.length; i++) {
-                        window.config[i]["PATH"] = window.config[i]["PATH"].split("\\").join('/');
-                        window.mark[window.config[i]["PATH"]] = false;
+            // 隐藏文件列表
+            hide_filelist();
+
+            // 请求父版本配置
+            $$("#parent_version_submit_btn").on("click", function(){
+                var parent_version_id = $$("#parent_version_id").val();
+                // 这里应该验证下ID的合理性
+                $$.post(window.url, {"action":"request_config", "parent_version_id" : parent_version_id})
+                .done(function(ret){
+                    var ret = JSON.parse(ret);
+                    window.filedict = ret["filelist"];
+                    window.filelist = [];
+                    for(filepath in window.filedict){
+                        if(window.filedict.hasOwnProperty(filepath)){
+                            var obj = [];
+                            obj[CONST_FILEPATH] = filepath;
+                            obj[CONST_FILEHASH] = window.filedict[filepath][CONST_FILEHASH];
+                            obj[CONST_FILESIZE] = window.filedict[filepath][CONST_FILESIZE];
+                            obj[CONST_FILEHASH_LOCAL] = '-';
+                            obj[CONST_FILESIZE_LOCAL] = '-';
+                            window.filelist.push(obj);
+                            window.filedict[filepath][CONST_INDEX_IN_FILELIST] = window.filelist.length-1;
+                        }
                     }
-                    show_config();  // 展示配置文件
-                }
-                else{
-                    alert("获取配置失败！" + ret["info"]);
-                }
+                    // 显示文件列表
+                    show_filelist();
+
+                    // 配置上传文件按钮
+                    show_uploadfile();
+                });
             });
-            
-            // 初始化上传文件控件
-            $$("#input-id").fileinput({
-                "showPreview" : true,
+
+        });
+
+        // 初始化上传文件控件
+        function show_uploadfile(){
+            $$("#input_id").fileinput({
+                "showPreview" : false,
                 "uploadUrl" : window.url,
                 "allowedPreviewTypes" : [],
-                //"maxFileCount" : 1,
-                // "filePathFilter" : function (filepath, filename) {
-                //     if (filepath in window.mark){
-                //         window.mark[filepath] = true;
-                //         return true;
-                //     }
-                //     else{
-                //         return false;
-                //     }
-                // },
+                "customFilter" : function (f) {     // File对象
+                    if(window.filedict.hasOwnProperty(f.webkitRelativePath)){
+                        window.filedict[f.webkitRelativePath][CONST_HASFILE] = true;
+                        return true;
+                    }else{
+                        window.filedict[f.webkitRelativePath][CONST_HASFILE] = false;
+                        return false;
+                    }
+
+                },
             })
             .on('filebatchselected', function(event, files) {
                 console.log('File batch selected triggered');
-                // for (var key in window.mark) {
-                //     // skip loop if the property is from prototype
-                //     if (!window.mark.hasOwnProperty(key)) continue;
-                //     window.mark[key] = false;
-                // }
-                show_config();
+                //show_filelist();
+
+                // 重新加载filelist的数据，达到刷新的目的
+                $$('#table1').bootstrapTable('load', window.filelist);
             })
             // browse button点击确定之后响应
             .on('change', function(event) {
                 // console.log("change");
-                // var filesCount = $$('#input-id').fileinput('getFilesCount'); // returns count of files
+                // var filesCount = $$('#input_id').fileinput('getFilesCount'); // returns count of files
                 // console.log(filesCount);
             })
             // 加载一个个文件时的消息
             .on('fileloaded', function(event, file, previewId, index, reader) {
-                // console.log(file.webkitRelativePath + " loaded");
+                console.log(file.webkitRelativePath + " loaded");
+                // 文件加载后开始计算FILESIZE
+                window.filedict[file.webkitRelativePath][CONST_FILESIZE_LOCAL] = file.size;
+                var index2 = window.filedict[file.webkitRelativePath][CONST_INDEX_IN_FILELIST];
+                window.filelist[index2][CONST_FILESIZE_LOCAL] = file.size;
+                $$('#table1').bootstrapTable('updateCell', {
+                    'index' : index2,
+                    'field' : CONST_FILESIZE_LOCAL,
+                    'value' : file.size
+                });      // 更新对应cell
+
+                // 文件加载后开始计算FILEHASH
+                var blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice,
+                    chunkSize = 2097152,                             // Read in chunks of 2MB
+                    chunks = Math.ceil(file.size / chunkSize),
+                    currentChunk = 0,
+                    spark = new SparkMD5.ArrayBuffer(),
+                    fileReader = new FileReader();
+
+                fileReader.onload = function (e) {
+                    console.log('read chunk nr', currentChunk + 1, 'of', chunks);
+                    spark.append(e.target.result);                   // Append array buffer
+                    currentChunk++;
+
+                    if (currentChunk < chunks) {
+                        loadNext();
+                    } else {
+                        console.log('finished calc hash');
+                        var hashstr = spark.end();
+                        window.filedict[file.webkitRelativePath][CONST_FILEHASH_LOCAL] = hashstr;
+                        var index3 = window.filedict[file.webkitRelativePath][CONST_INDEX_IN_FILELIST];
+                        window.filelist[index3][CONST_FILEHASH_LOCAL] = hashstr;
+                        $$('#table1').bootstrapTable('updateCell', {
+                            'index' : index3,
+                            'field' : CONST_FILEHASH_LOCAL,
+                            'value' : hashstr,
+                        });      // 更新对应cell
+                    }
+                };
+
+                fileReader.onerror = function () {
+                    console.warn('oops, something went wrong.');
+                };
+
+                function loadNext() {
+                    var start = currentChunk * chunkSize,
+                        end = ((start + chunkSize) >= file.size) ? file.size : start + chunkSize;
+                    fileReader.readAsArrayBuffer(blobSlice.call(file, start, end));
+                }
+
+                loadNext();
             })
             // 上传一个文件，开始AJAX之前
             .on('filepreajax', function(event, previewId, index) {
-                // var files = $$('#input-id').fileinput('getFileStack');
+                // var files = $$('#input_id').fileinput('getFileStack');
                 // window.extra_data = {filepath : files[index].webkitRelativePath};
                 // console.log('File pre ajax triggered');
             })
@@ -103,41 +177,58 @@
                     // }
                 });
             });
-        });
-
+        }
+        
         // 展示配置
-        function show_config(){
+        function show_filelist(){
+            $$(".container").show();
             $$("#table1").bootstrapTable("destroy");
             $$('#table1').bootstrapTable({  
                 columns: [  
-                    { field: 'PATH', title: 'Path' },  
-                    { field: 'PROJECT_GROUP_NAME', title: 'Group' },  
-                    { field: 'MD5_SIZE_SERVER', title: 'MD5和大小(服务器)' },   
-                    { field: 'MD5_SIZE_LOCAL', title: 'MD5和大小(本地)' }, 
+                    { field: CONST_FILEPATH, title: 'Path' },  
+                    { field: CONST_FILEHASH, title: 'MD5(服务器)' },   
+                    { field: CONST_FILESIZE, title: '文件大小(服务器)' }, 
+                    { field: CONST_FILEHASH_LOCAL, title: 'MD5(本地)' },   
+                    { field: CONST_FILESIZE_LOCAL, title: '文件大小(本地)' }, 
                 ],
-                data : window.config,
+                data : window.filelist,
                 rowStyle: function (row, index) {
                     //这里有5个取值代表5种颜色['active', 'success', 'info', 'warning', 'danger'];
-                    if(window.mark[row["PATH"]] == true){
-                        return { classes: 'danger' };
-                    }
-                    else{
+                    if(window.filedict.hasOwnProperty(row[CONST_FILEPATH])){
+                        if(window.filedict[row[CONST_FILEPATH]][CONST_HASFILE] == true){
+                            return { classes: 'danger' };
+                        }else{
+                            return {};
+                        }
+                    }else{
                         return {};
                     }
                 },
             }); 
         }
+
+        // 隐藏文件列表
+        function hide_filelist(){
+            $$(".container").hide();
+        }
     </script>
 </head>
 
 <body>
+    <div class="input-group">
+        <span class="input-group-btn">
+            <button id="parent_version_submit_btn" class="btn btn-default" type="button">
+                提交
+            </button>
+        </span>
+        <input id="parent_version_id" type="text" class="form-control" placeholder="父版本ID">
+    </div><!-- /input-group -->
     <div class="container">
         <div id="toolbar" class="btn-group" role="group" >
-            <label class="control-label">选择包含以下文件的目录进行上传</label>
-                <input id="input-id" name="input_files" class="file-loading" type="file" multiple webkitdirectory />
+            <label class="control-label">请选择目录，程序会对目录所有文件按下表过滤：</label>
+                <input id="input_id" name="input_files" class="file-loading" type="file" multiple webkitdirectory />
             </button>
         </div>
-
         <table id="table1" data-classes="table table-hover " data-search="false" data-show-refresh="false" data-show-toggle="false"
             data-show-columns="false">
         </table>

@@ -681,6 +681,28 @@ class DBWrapper(object):
             self.create_fill_version_detail_table(version_id, version_detail)
             return (True, version_id)
 
+    def get_filelist(self, parent_version_id, staff_id):
+        """
+        根据父版本和用户ID获得其有权限的文件列表
+        [IN]
+        parent_version_id - int 父版本ID
+        staff_id : int 用户ID
+        [OUT]
+        filelist : {VERSION_DETAIL_PATH : {VERSION_DETAIL_HASH, VERSION_DETAIL_FILESIZE}}
+        """
+        # 根据父版本ID获得对应配置表ID
+        # 根据配置表ID和用户ID过滤获得剩下的filelist
+        # 拿filelist在父版本文件列表中查找对应的HASH和FILESIZE
+
+        version_file_list = self.get_version_detail_table(parent_version_id)
+        filelist = {}
+        for filepath in version_file_list:
+            filelist[filepath] = {
+                DBWrapper.VERSION_DETAIL_HASH : version_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
+                DBWrapper.VERSION_DETAIL_FILESIZE : version_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
+            }
+        return filelist
+
 def populate_db(dbname):
     """
     生成一个数据库
