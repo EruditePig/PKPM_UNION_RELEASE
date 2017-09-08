@@ -22,6 +22,7 @@
         // OnLoad
         $$(document).ready(function() {
             window.CONST_INDEX_IN_FILELIST = "INDEX_IN_FILELIST";     // 常量字符串
+            window.CONST_FILE_OBJ = "FILE_OBJ";     // File对象
             window.CONST_FILEPATH = "FILEPATH";      
             window.CONST_FILEHASH = "FILEHASH";
             window.CONST_FILESIZE = "FILESIZE";
@@ -52,8 +53,10 @@
                             obj[CONST_FILESIZE] = window.filedict[filepath][CONST_FILESIZE];
                             obj[CONST_FILEHASH_LOCAL] = '-';
                             obj[CONST_FILESIZE_LOCAL] = '-';
+                            obj[CONST_HASFILE] = false;
                             window.filelist.push(obj);
                             window.filedict[filepath][CONST_INDEX_IN_FILELIST] = window.filelist.length-1;
+                            window.filedict[filepath][CONST_HASFILE] = false;
                         }
                     }
                     // 显示文件列表
@@ -72,23 +75,33 @@
                 "showPreview" : false,
                 "uploadUrl" : window.url,
                 "allowedPreviewTypes" : [],
+                "uploadExtraData" : function(previewId, index){
+                    if (index !== undefined){
+                        var filestack = $$('#input_id').fileinput('getFileStack');
+                        var data = {
+                            "filepath" : filestack[index].webkitRelativePath,
+                            "filename" : filestack[index].name,
+                            "project_group_name" : "建模项目组",
+                        }
+                        return data;
+                    }
+                    else{
+                        return {};
+                    }
+                },
                 "customFilter" : function (f) {     // File对象
+                    var index = window.filedict[f.webkitRelativePath][CONST_INDEX_IN_FILELIST];
                     if(window.filedict.hasOwnProperty(f.webkitRelativePath)){
                         window.filedict[f.webkitRelativePath][CONST_HASFILE] = true;
+                        window.filelist[index][CONST_HASFILE] = true;
+                        window.filedict[f.webkitRelativePath][CONST_FILE_OBJ] = f;
+                        window.filelist[index][CONST_FILE_OBJ] = f;
                         return true;
                     }else{
-                        window.filedict[f.webkitRelativePath][CONST_HASFILE] = false;
                         return false;
                     }
 
                 },
-            })
-            .on('filebatchselected', function(event, files) {
-                console.log('File batch selected triggered');
-                //show_filelist();
-
-                // 重新加载filelist的数据，达到刷新的目的
-                $$('#table1').bootstrapTable('load', window.filelist);
             })
             // browse button点击确定之后响应
             .on('change', function(event) {
@@ -150,6 +163,28 @@
 
                 loadNext();
             })
+            .on('filebatchselected', function(event, files) {
+                console.log('File batch selected triggered');
+                // 重新刷新FileInput的filestack，只有hash或者filesize本地与服务器不同的才放在filestack里
+                $$('#input_id').fileinput('clearStack');
+                for(var i=0; i<window.filelist.length; ++i){
+                    if(window.filelist[i][CONST_HASFILE] === false) continue;
+                    var hashServer = window.filelist[i][CONST_FILEHASH];
+                    var filesizeServer = window.filelist[i][CONST_FILESIZE];
+                    var hashLocal = window.filelist[i][CONST_FILEHASH_LOCAL] || false;
+                    var filesizeLocal = window.filelist[i][CONST_FILESIZE_LOCAL] || false;
+                    if(hashLocal && filesizeLocal){
+                        if(hashServer === hashLocal && filesizeServer === filesizeLocal){
+                            // pass
+                        }else{
+                            $$('#input_id').fileinput('addToStack', window.filelist[i][CONST_FILE_OBJ]);
+                        }
+                    }
+                }
+                // 重新加载filelist的数据，达到刷新的目的
+                $$('#table1').bootstrapTable('load', window.filelist);
+
+            })
             // 上传一个文件，开始AJAX之前
             .on('filepreajax', function(event, previewId, index) {
                 // var files = $$('#input_id').fileinput('getFileStack');
@@ -162,19 +197,7 @@
                 $$.post(window.url, {action:"upload_complete", key:""})  
                 .done(function(result)
                 {  
-                    // var ret = JSON.parse(result);
-                    // if(ret["state"] == "success"){
-                    //     window.config = ret["config"];
-                    //     // 解析配置文件里的路径
-                    //     for(var i = 0;i < window.config.length; i++) {
-                    //         window.config[i]["PATH"] = window.config[i]["PATH"].split("\\").join('/');
-                    //         window.mark[window.config[i]["PATH"]] = false;
-                    //     }
-                    //     show_config();  // 展示配置文件
-                    // }
-                    // else{
-                    //     alert("获取配置失败！" + ret["info"]);
-                    // }
+                    
                 });
             });
         }
