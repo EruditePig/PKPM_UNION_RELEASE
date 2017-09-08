@@ -19,21 +19,16 @@ class upload_new_version:
         x = web.input()
         if 'input_files' in x:  # to check if the file-object is created
             md5 = hashlib.md5(x.input_files).hexdigest()
-            size = len(x.input_files)
+            filesize = len(x.input_files)
             filepath = x.filepath.replace('\\','/') # replaces the windows-style slashes with linux ones.
             filename = filepath.split('/')[-1] # splits the and chooses the last part (the filename with extension)
-            filename = md5 + "-" + str(size) + "-"  + filename;
+            filename = md5 + "-" + str(filesize) + "-"  + filename;
             if not os.path.exists(temp_path):
                 os.makedirs(temp_path)
             fout = open(temp_path +'/'+ filename,'wb') # creates the file where the uploaded file should be stored
             fout.write(x.input_files) # writes the uploaded file to the newly created file.
             fout.close() # closes the file, upload complete.
-            g_new_version[ADD_FILES].append({
-                ADD_FILES_FILEPATH : filepath,
-                ADD_FILES_FILENAME : filename,
-                ADD_FILES_FILEHASH : md5,
-                ADD_FILES_FILESIZE : size
-            })
+            g_new_version[MOD_FILES][filepath] = {MOD_FILES_FILENAME : filename, MOD_FILES_FILEHASH: md5, MOD_FILES_FILESIZE : filesize}
             return json.dumps({})
         else:
             data = web.data()
@@ -44,19 +39,15 @@ class upload_new_version:
                 db = dbwrapper.DBWrapper(dbpath)
                 staff_id = 1
                 filelist = db.get_filelist(parent_version_id, staff_id)
+                g_new_version[PARENT_VERSION_ID] = parent_version_id
                 return json.dumps({"state" : "success", "filelist" : filelist})
-                try:
-                    db = dbwrapper.DBWrapper(dbpath)
-                    config_log = db.get_config_create_log_table()
-                    first_config_name = config_log[0][dbwrapper.DBWrapper.CONFIG_CREATE_LOG_CONFIG_NAME]
-                    config = db.get_config_table(first_config_name)
-                    return json.dumps({"state" : "success", "config" : config})
-                except:
-                    return json.dumps({"state" : "fail", "info" : str(sys.exc_info()[0])})
             elif request_type == 'upload_complete':
+                print g_new_version[MOD_FILES]
                 fm = file_manage.file_manage()
-                fm.arrange_file_from_temp_path(g_new_version["files"])
-                g_new_version[ADD_FILES] = []
+                fm.arrange_file_from_temp_path(g_new_version[MOD_FILES])
+                db = dbwrapper.DBWrapper(dbpath)
+                db.create_new_version_from_file_list(g_new_version[PARENT_VERSION_ID], g_new_version[MOD_FILES], None, None, 1, "第一次用界面修改版本")
+                g_new_version[MOD_FILES].clear()
             else:
                 return json.dumps({"state" : "fail", "info" : "unknown request"})
 

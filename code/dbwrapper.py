@@ -608,46 +608,51 @@ class DBWrapper(object):
                 config_info = self.get_config_table(config_id)
 
                 version_detail = {}     # 版本信息表
-                for filepath in mod_file_list:
-                    if filepath in config_info:
-                        version_detail[filepath] = {
-                            DBWrapper.VERSION_DETAIL_HASH : mod_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
-                            DBWrapper.VERSION_DETAIL_FILESIZE : mod_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
-                            DBWrapper.VERSION_DETAIL_STATE : DBWrapper.FILE_MOD
-                        }
-                
-                for filepath in add_file_list:
-                    if filepath not in config_info:
-                        version_detail[filepath] = {
-                            DBWrapper.VERSION_DETAIL_HASH : add_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
-                            DBWrapper.VERSION_DETAIL_FILESIZE : add_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
-                            DBWrapper.VERSION_DETAIL_STATE : DBWrapper.FILE_ADD
-                        }
+                if mod_file_list:
+                    for filepath in mod_file_list:
+                        if filepath in config_info:
+                            version_detail[filepath] = {
+                                DBWrapper.VERSION_DETAIL_HASH : mod_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
+                                DBWrapper.VERSION_DETAIL_FILESIZE : mod_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
+                                DBWrapper.VERSION_DETAIL_STATE : DBWrapper.FILE_MOD
+                            }
 
-                for filepath in del_file_list:
-                    if filepath in config_info:
-                        version_detail[filepath] = {
-                            DBWrapper.VERSION_DETAIL_HASH : del_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
-                            DBWrapper.VERSION_DETAIL_FILESIZE : del_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
-                            DBWrapper.VERSION_DETAIL_STATE : DBWrapper.FILE_DEL
-                        }
+                if add_file_list:    
+                    for filepath in add_file_list:
+                        if filepath not in config_info:
+                            version_detail[filepath] = {
+                                DBWrapper.VERSION_DETAIL_HASH : add_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
+                                DBWrapper.VERSION_DETAIL_FILESIZE : add_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
+                                DBWrapper.VERSION_DETAIL_STATE : DBWrapper.FILE_ADD
+                            }
+
+                if del_file_list:
+                    for filepath in del_file_list:
+                        if filepath in config_info:
+                            version_detail[filepath] = {
+                                DBWrapper.VERSION_DETAIL_HASH : del_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
+                                DBWrapper.VERSION_DETAIL_FILESIZE : del_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
+                                DBWrapper.VERSION_DETAIL_STATE : DBWrapper.FILE_DEL
+                            }
 
                 # 如果存在添加文件和删除文件，就要新建配置文件了
                 if add_file_list or del_file_list:
                     new_config_info = config_info
 
-                    for filepath in add_file_list:
-                        if filepath not in new_config_info:
-                            new_config_info[filepath] = {
-                                DBWrapper.CONFIG_HASH : add_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
-                                DBWrapper.CONFIG_FILESIZE : add_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
-                                DBWrapper.CONFIG_PROJECT_GROUP_NAME : add_file_list[filepath][DBWrapper.CONFIG_PROJECT_GROUP_NAME]
-                            }
+                    if add_file_list:
+                        for filepath in add_file_list:
+                            if filepath not in new_config_info:
+                                new_config_info[filepath] = {
+                                    DBWrapper.CONFIG_HASH : add_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
+                                    DBWrapper.CONFIG_FILESIZE : add_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
+                                    DBWrapper.CONFIG_PROJECT_GROUP_NAME : add_file_list[filepath][DBWrapper.CONFIG_PROJECT_GROUP_NAME]
+                                }
 
-                    for filepath in del_file_list:
-                        if filepath in new_config_info:
-                            new_config_info.pop(filepath)
-                    
+                    if del_file_list:
+                        for filepath in del_file_list:
+                            if filepath in new_config_info:
+                                new_config_info.pop(filepath)
+                        
                     config_id = self.create_fill_config_table(staff_id, description, new_config_info)
 
                 # 在版本列表中创建新的版本
