@@ -49,8 +49,6 @@ class DBWrapper(object):
     # 具体配置
     CONFIG_DETAIL = "CONFIG_"
     CONFIG_PATH = "FILEPATH"                                # TEXT PRIMARY KEY NOT NULL
-    CONFIG_HASH = "FILEHASH"                                # TEXT NOT NULL
-    CONFIG_FILESIZE = "FILESIZE"                        # INTEGER NOT NULL
     CONFIG_PROJECT_GROUP_NAME = "PROJECT_GROUP_NAME"    # TEXT NOT NULL
 
     # 版本信息表
@@ -349,12 +347,10 @@ class DBWrapper(object):
         [IN]
         config_id - int 配置表id
         """
-        stmt = "CREATE TABLE IF NOT EXISTS {0}{1} ({2} TEXT PRIMARY KEY NOT NULL, {3} TEXT NOT NULL, {4} INTEGER NOT NULL, {5} TEXT NOT NULL);".format(
+        stmt = "CREATE TABLE IF NOT EXISTS {0}{1} ({2} TEXT PRIMARY KEY NOT NULL, {3} TEXT NOT NULL);".format(
             DBWrapper.CONFIG_DETAIL,
             str(config_id),
             DBWrapper.CONFIG_PATH,
-            DBWrapper.CONFIG_HASH,
-            DBWrapper.CONFIG_FILESIZE,
             DBWrapper.CONFIG_PROJECT_GROUP_NAME
         )
         c = self.conn.cursor()
@@ -389,7 +385,7 @@ class DBWrapper(object):
         [IN]
         staff_id - int 用户ID
         description - str 配置表描述
-        new_config_info - {CONFIG_PATH : {CONFIG_HASH, CONFIG_FILESIZE, CONFIG_PROJECT_GROUP_NAME}}
+        new_config_info - {CONFIG_PATH : {CONFIG_PROJECT_GROUP_NAME}}
         [OUT]
         config_id - int 新建的配置表ID
         """
@@ -399,8 +395,6 @@ class DBWrapper(object):
             self.insert_to_config_table(
                 config_id,
                 filepath,
-                new_config_info[filepath][DBWrapper.CONFIG_HASH],
-                new_config_info[filepath][DBWrapper.CONFIG_FILESIZE],
                 new_config_info[filepath][DBWrapper.CONFIG_PROJECT_GROUP_NAME]
             )
         return config_id
@@ -409,7 +403,7 @@ class DBWrapper(object):
         """
         获取某个配置
         [OUT]
-        config = {PATH, {HASH, FILESIZE, PROJECT_GROUP_NAME}}
+        config = {PATH, {PROJECT_GROUP_NAME}}
         """
         stmt = "SELECT * FROM " + DBWrapper.CONFIG_DETAIL + str(config_id) + ";"
         c = self.conn.cursor()
@@ -421,9 +415,9 @@ class DBWrapper(object):
             if not rows:
                 break
             for row in rows:
-                config[row[DBWrapper.CONFIG_PATH]] = {DBWrapper.CONFIG_HASH : row[DBWrapper.CONFIG_HASH],
-                                                    DBWrapper.CONFIG_FILESIZE : row[DBWrapper.CONFIG_FILESIZE],
-                                                    DBWrapper.CONFIG_PROJECT_GROUP_NAME : row[DBWrapper.CONFIG_PROJECT_GROUP_NAME]}
+                config[row[DBWrapper.CONFIG_PATH]] = {
+                    DBWrapper.CONFIG_PROJECT_GROUP_NAME : row[DBWrapper.CONFIG_PROJECT_GROUP_NAME]
+                }
         return config
 
     def create_version_detail_table(self, version_id):
@@ -643,8 +637,6 @@ class DBWrapper(object):
                         for filepath in add_file_list:
                             if filepath not in new_config_info:
                                 new_config_info[filepath] = {
-                                    DBWrapper.CONFIG_HASH : add_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
-                                    DBWrapper.CONFIG_FILESIZE : add_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
                                     DBWrapper.CONFIG_PROJECT_GROUP_NAME : add_file_list[filepath][DBWrapper.CONFIG_PROJECT_GROUP_NAME]
                                 }
 
@@ -675,8 +667,6 @@ class DBWrapper(object):
                     DBWrapper.VERSION_DETAIL_STATE : DBWrapper.FILE_ADD
                 }
                 new_config_info[filepath] = {
-                    DBWrapper.CONFIG_HASH : add_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
-                    DBWrapper.CONFIG_FILESIZE : add_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
                     DBWrapper.CONFIG_PROJECT_GROUP_NAME : add_file_list[filepath][DBWrapper.CONFIG_PROJECT_GROUP_NAME]
                 }
             config_id = self.create_fill_config_table(staff_id, description, new_config_info)
@@ -707,6 +697,18 @@ class DBWrapper(object):
                 DBWrapper.VERSION_DETAIL_FILESIZE : version_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
             }
         return filelist
+
+    def get_version_config_info(self, version_id):
+        """
+        根据版本号获得该版本的配置表
+        [IN]
+        version_id - int 版本号
+        [OUT]
+        config_info - 配置表 {CONFIG_PATH : {CONFIG_PROJECT_GROUP_NAME}}
+        """
+        version_info = self.get_one_version_info(version_id)
+        if version_info:
+            return self.get_config_table(version_info[DBWrapper.VERSION_LIST_CONFIG_TABLE_ID])
 
 def populate_db(dbname):
     """
@@ -766,10 +768,12 @@ def populate_db(dbname):
 if __name__ == '__main__':
 
     # 生成数据库
-    populate_db(dbpath)
+    # populate_db(dbpath)
 
     # 连接数据库
-    # db = DBWrapper("test.db")
+    db = DBWrapper(dbpath)
+    config_info = db.get_version_config_info(1)
+    print config_info
     # print db.get_config_table("1")
     #db.create_version_list_table()
     #db.create_project_group_permission_table()

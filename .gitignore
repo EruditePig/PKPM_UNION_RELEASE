@@ -3,3 +3,4 @@ workdir/
 dist/
 PKPM统一发布管理流程/
 code/*.pyc
+sync.ffs_db

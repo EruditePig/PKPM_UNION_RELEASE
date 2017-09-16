@@ -14,6 +14,7 @@ from index import *
 from save_first_config import *
 from upload_first_version import *
 from upload_new_version import * 
+from upload_new_config import * 
 from show_version_hierachy import *
 
 
@@ -22,6 +23,7 @@ urls = (
     '/save_first_config','save_first_config',
     '/upload_first_version','upload_first_version',
     '/upload_new_version', 'upload_new_version',
+    '/upload_new_config', 'upload_new_config',
     '/show_version_hierachy', 'show_version_hierachy',
 )
 

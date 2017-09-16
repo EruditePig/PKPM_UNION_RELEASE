@@ -7,3 +7,12 @@ http://www.cnblogs.com/wuhuacong/p/4774396.html
 http://blog.csdn.net/dlf123321/article/details/51094402
 http://blog.csdn.net/u012639466/article/details/53773687
 http://www.jtopo.com/demo/helloworld.html
+
+vis.js
+http://visjs.org/network_examples.html
+http://visjs.org/docs/network/#Events
+http://visjs.org/examples/network/events/interactionEvents.html
+
+jstree
+https://www.jstree.com
+http://bootstrapmaster.com/live/one/icons.html

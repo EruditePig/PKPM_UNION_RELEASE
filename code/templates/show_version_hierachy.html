@@ -54,6 +54,7 @@
 
             window.url = "show_version_hierachy";
             window.upload_new_version_url = "upload_new_version";
+            window.upload_new_config_url = "upload_new_config";
             window.version_hierachy = {};       // 以{ver_id, [child_ver_id]}的形式记录版本层级
             window.version_nodes = new vis.DataSet();
             window.version_edges = new vis.DataSet();
@@ -95,8 +96,7 @@
                     
                     // A case for each action. Your actions here
                     case "upload_new_version": upload_new_version(); break;
-                    case "second": alert("second"); break;
-                    case "third": alert("third"); break;
+                    case "mod_config": mod_config(); break;
                 }
             
                 // Hide it AFTER the action was triggered
@@ -111,6 +111,12 @@
             window.open(window.upload_new_version_url + "?parent_version_id="+ parent_version_id);
         }
 
+        // 修改配置
+        function mod_config(){
+            var parent_version_id = window.current_sel_version_id;      // 新配置基于的版本
+            window.open(window.upload_new_config_url + "?parent_version_id="+ parent_version_id);
+        }
+        
         // 展示版本层级表
         function show_version_hierachy() {
 
@@ -179,8 +185,7 @@
 
     <ul class='custom-menu'>
         <li data-action="upload_new_version">新建版本</li>
-        <li data-action="second">修改配置</li>
-        <li data-action="third">Third thing</li>
+        <li data-action="mod_config">修改配置</li>
     </ul>
 </body>
 

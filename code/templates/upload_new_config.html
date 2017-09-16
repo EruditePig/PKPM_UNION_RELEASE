@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <script src="/static/js/jquery/jquery-3.2.1.js"></script>
+
+    <script src="/static/js/bootstrap/js/bootstrap.js"></script>
+    <link rel="stylesheet" href="/static/js/bootstrap/css/bootstrap.css">
+
+    <!-- jstree 树控件-->
+    <link rel="stylesheet" href="/static/js/jstree/themes/default/style.min.css" />
+    <script src="/static/js/jstree/jstree.js"></script>
+
+    <!-- bootstrap table 表格控件-->
+    <script src="/static/js/bootstrap-table/bootstrap-table.js"></script>
+    <link rel="stylesheet" href="/static/js/bootstrap-table/bootstrap-table.css">
+
+    <script>
+        // 解析URL中的GET参数
+        function getSearchParameters() {
+            var prmstr = window.location.search.substr(1);
+            return prmstr != null && prmstr != "" ? transformToAssocArray(prmstr) : {};
+        }
+        function transformToAssocArray(prmstr) {
+            var params = {};
+            var prmarr = prmstr.split("&");
+            for (var i = 0; i < prmarr.length; i++) {
+                var tmparr = prmarr[i].split("=");
+                params[tmparr[0]] = tmparr[1];
+            }
+            return params;
+        }
+        window.GET_PARAMS = getSearchParameters();
+        window.CHANGE_STATE = "STATE";
+        window.CHANGE_STATE_ADD = "添加";
+        window.CHANGE_STATE_DEL = "删除";
+        window.CHANGE_PATH = "PATH";
+        window.CHANGE_PROJECT_GROUP_NAME = "PROJECT_GROUP_NAME";
+        window.ROOT_NAME = "PKPM目录";
+        window.TYPE_ROOT = "root folder";
+        window.TYPE_FOLDER = "folder";
+        window.TYPE_FILE = "file";
+        window.change_table_data = [];
+
+        // OnLoad
+        $$(document).ready(function () {
+            var parent_version_id = window.GET_PARAMS.parent_version_id;        // 新配置基于的版本
+
+            var tree_arg = {};
+            tree_arg['core'] = {
+                "check_callback" : function (operation, node, parent, position, more) {
+                    if(operation === "copy_node" || operation === "move_node") {
+                        if(parent.id === "#") {
+                            return false; // prevent moving a child above or below the root
+                        }
+                    }
+                    return true; // allow everything else
+                },
+                'data' : [
+                    { "id" : ROOT_NAME, "parent" : "#", "text" : ROOT_NAME, "type" : TYPE_ROOT, "state" : { "opened" : true}},
+                    { "id" : ROOT_NAME + "/CFG", "parent" : ROOT_NAME, "text" : "CFG", "type" : TYPE_FOLDER},
+                    { "id" : ROOT_NAME + "/Ribbon", "parent" : ROOT_NAME, "text" : "Ribbon", "type" : "folder" },
+                    { "id" : ROOT_NAME + "/CFG/CFG_PATH", "parent" : ROOT_NAME + "/CFG", "text" : "CFG_PATH", "type" : "file" },
+                    { "id" : ROOT_NAME + "/CFG/pkpm.ini", "parent" : ROOT_NAME + "/CFG", "text" : "pkpm.ini", "type" : "file" },
+                ]
+            };
+            tree_arg['plugins'] = ["contextmenu", "search", "types", "sort", "unique"];
+            tree_arg['unique'] = {
+                "case_sensitive" : false,
+            }
+            tree_arg['types'] = {};
+            tree_arg['types'][TYPE_ROOT] = { "icon" : "glyphicon glyphicon-folder-close"};
+            tree_arg['types'][TYPE_FOLDER] = { "icon" : "glyphicon glyphicon-folder-close"};
+            tree_arg['types'][TYPE_FILE] = { "icon" : "glyphicon glyphicon-file"};
+            tree_arg['contextmenu'] = {
+                "select_node" : false,
+                "show_at_node" : false,
+                "items": function(node) {
+                    var tree = $$('#config_tree').jstree(true);
+                    
+                    if (node.type === TYPE_FOLDER) {
+                        var items = {
+                            "AddFile": {
+                                "separator_before": false,
+                                "separator_after": false,
+                                "label": "添加文件",
+                                "action": function (obj) { 
+                                    newnodeid = tree.create_node(
+                                        node, 
+                                        {
+                                            "type" : TYPE_FILE,
+                                        });
+                                    tree.edit(newnodeid, null, function(newnode, nv, cancel){
+                                        var parent = tree.get_node(newnode.parent);
+                                        //console.log(parent);
+                                        tree.set_id(newnode, parent.id + "/" + newnode.text);
+                                        //console.log(newnode);
+                                        add_file_to_table(ID2Path(newnode.id));
+                                        reload_change_table();
+                                    });
+                                }
+                            },
+                            "AddFolder": {
+                                "separator_before": false,
+                                "separator_after": false,
+                                "label": "添加子目录",
+                                "action": function (obj) { 
+                                    newnodeid = tree.create_node(
+                                        node, 
+                                        {
+                                            "type" : TYPE_FOLDER,
+                                        });
+                                    tree.edit(newnodeid, null, function(newnode, nv, cancel){
+                                        var parent = tree.get_node(newnode.parent);
+                                        //console.log(parent);
+                                        tree.set_id(newnode, parent.id + "/" + newnode.text);
+                                        //console.log(newnode);
+                                    });
+                                }
+                            },                         
+                            "Remove": {
+                                "separator_before": false,
+                                "separator_after": false,
+                                "label": "删除目录",
+                                "action": function (obj) { 
+                                    var folder = tree.get_node(node);
+                                    for(var i=0; i<folder.children_d.length; ++i){
+                                        if(tree.get_type(folder.children_d[i]) == TYPE_FILE){
+                                            del_file_to_table(ID2Path(folder.children_d[i]));
+                                        }
+                                    }
+                                    reload_change_table();
+                                    tree.delete_node(node);
+                                }
+                            }
+                        };
+                        return items;
+                    }else if(node.type === TYPE_FILE){
+                        var items = {
+                            "Remove": {
+                                "separator_before": false,
+                                "separator_after": false,
+                                "label": "删除文件",
+                                "action": function (obj) { 
+                                    tree.delete_node(node);
+                                    del_file_to_table(ID2Path(node.id));
+                                    reload_change_table();
+                                }
+                            },
+                        };
+                        return items;
+                    }else if(node.type == TYPE_ROOT){
+                        var items = {
+                            "AddFile": {
+                                "separator_before": false,
+                                "separator_after": false,
+                                "label": "添加文件",
+                                "action": function (obj) { 
+                                    newnodeid = tree.create_node(
+                                        node, 
+                                        {
+                                            "type" : TYPE_FILE,
+                                        });
+                                    tree.edit(newnodeid, null, function(newnode, nv, cancel){
+                                        var parent = tree.get_node(newnode.parent);
+                                        //console.log(parent);
+                                        tree.set_id(newnode, parent.id + "/" + newnode.text);
+                                        //console.log(newnode);
+                                        add_file_to_table(ID2Path(newnode.id));
+                                        reload_change_table();
+                                    });
+                                }
+                            },
+                            "AddFolder": {
+                                "separator_before": false,
+                                "separator_after": false,
+                                "label": "添加子目录",
+                                "action": function (obj) { 
+                                    newnodeid = tree.create_node(
+                                        node, 
+                                        {
+                                            "type" : TYPE_FOLDER,
+                                        });
+                                    tree.edit(newnodeid, null, function(newnode, nv, cancel){
+                                        var parent = tree.get_node(newnode.parent);
+                                        //console.log(parent);
+                                        tree.set_id(newnode, parent.id + "/" + newnode.text);
+                                        //console.log(newnode);
+                                    });
+                                }
+                            },
+                        };
+                        return items;
+                    }
+                }
+            };
+
+            $$('#config_tree').jstree(tree_arg);
+
+            $$('#config_tree').on("changed.jstree", function (e, data) {
+                //console.log(data.instance.get_selected(true)[0].text);
+                //console.log(data.instance.get_node(data.selected[0]).text);
+            });
+            $$("#s").submit(function(e) {
+                e.preventDefault();
+                $$("#config_tree").jstree(true).search($$("#q").val());
+            });
+            $$("#test_btn").on("click", function(){
+                var tree = $$("#config_tree").jstree(true);
+                var node = tree.get_node("ajson4");
+                tree.select_node(node);
+                tree.delete_node(node);
+            });
+
+
+            $$('#change_table').bootstrapTable({  
+                columns: [
+                    { field : 'STATE', title : 'STATE'},
+                    { field : 'PATH', title : 'Path' },  
+                    { field : 'PROJECT_GROUP_NAME', title : 'Group' },  
+                ],
+            }); 
+        });
+
+        // id变为path
+        function ID2Path(id){
+            return id.substr(ROOT_NAME.length + 1);
+        }
+
+        // path变ID
+        function Path2ID(path){
+            return ROOT_NAME + '/' + path;
+        }
+
+        // 重新加载表格
+        function reload_change_table(){
+            $$("#change_table").bootstrapTable("load", window.change_table_data);
+        }
+
+        // 添加文件到表格
+        function add_file_to_table(filepath){
+            // 先检查添加的文件是不是已经删除的，如果是删除的，则撤销其更改即可
+            for(var i=0; i<window.change_table_data.length; ++i){
+                if(window.change_table_data[i][CHANGE_STATE] === CHANGE_STATE_DEL && window.change_table_data[i][CHANGE_PATH] === filepath){
+                    window.change_table_data.splice(i, 1);
+                    return;
+                }
+            }
+            var obj = [];
+            obj[CHANGE_STATE] = CHANGE_STATE_ADD;
+            obj[CHANGE_PATH] = filepath;
+            obj[CHANGE_PROJECT_GROUP_NAME] = "-";
+            window.change_table_data.push(obj);
+        }
+
+
+        // 删除文件到表格
+        function del_file_to_table(filepath){
+            // 先检查删除的文件是不是刚添加的，如果是刚添加的，则撤销其更改即可
+            for(var i=0; i<window.change_table_data.length; ++i){
+                if(window.change_table_data[i][CHANGE_STATE] === CHANGE_STATE_ADD && window.change_table_data[i][CHANGE_PATH] === filepath){
+                    window.change_table_data.splice(i, 1);
+                    return;
+                }
+            }
+            var obj = [];
+            obj[CHANGE_STATE] = CHANGE_STATE_DEL;
+            obj[CHANGE_PATH] = filepath;
+            obj[CHANGE_PROJECT_GROUP_NAME] = "-";
+            window.change_table_data.push(obj);
+        }
+
+    </script>
+</head>
+
+<body>
+    
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <form id="s">
+                    <input type="search" id="q" />
+                    <button type="submit">Search</button>
+                </form>
+                <div id="config_tree">
+                </div>
+            </div>
+            <div class="col-md-6" >
+                <div id="change_table">
+                </div>
+            </div>      
+        </div>
+</body>
+
+</html>
