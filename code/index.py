@@ -7,9 +7,8 @@ import dbwrapper
 
 class index:
     def GET(self):
-        db = dbwrapper.DBWrapper(dbpath)
-        return g_render.upload_new_version()
-
+        return g_render.show_version_hierachy()
+        
 if __name__ == "__main__":
     ii = index()
     ii.GET()

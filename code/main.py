@@ -14,12 +14,15 @@ from index import *
 from save_first_config import *
 from upload_first_version import *
 from upload_new_version import * 
+from show_version_hierachy import *
+
 
 urls = (
     '/','index',
     '/save_first_config','save_first_config',
     '/upload_first_version','upload_first_version',
     '/upload_new_version', 'upload_new_version',
+    '/show_version_hierachy', 'show_version_hierachy',
 )
 
 app = web.application(urls, globals())

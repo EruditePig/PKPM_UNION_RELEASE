@@ -13,7 +13,7 @@ import file_manage
 
 class upload_new_version:
     def GET(self):
-        pass
+        return g_render.upload_new_version()
 
     def POST(self):
         x = web.input()
@@ -42,7 +42,6 @@ class upload_new_version:
                 g_new_version[PARENT_VERSION_ID] = parent_version_id
                 return json.dumps({"state" : "success", "filelist" : filelist})
             elif request_type == 'upload_complete':
-                print g_new_version[MOD_FILES]
                 fm = file_manage.file_manage()
                 fm.arrange_file_from_temp_path(g_new_version[MOD_FILES])
                 db = dbwrapper.DBWrapper(dbpath)

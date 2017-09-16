@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <!-- jquery -->
+    <script src="/static/js/jquery/jquery-3.2.1.js"></script>
+
+    <!-- vis.js 展示版本Hierarchy -->
+    <script src="/static/js/vis_js/dist/vis.js"></script>
+    <link href="/static/js/vis_js/dist/vis.css" rel="stylesheet" type="text/css" />
+
+    <style type="text/css">
+        #mynetwork {
+            width: 600px;
+            height: 400px;
+            border: 1px solid lightgray;
+        }
+        /* The whole thing */
+
+        .custom-menu {
+            display: none;
+            z-index: 1000;
+            position: absolute;
+            overflow: hidden;
+            border: 1px solid #CCC;
+            white-space: nowrap;
+            font-family: sans-serif;
+            background: #FFF;
+            color: #333;
+            border-radius: 5px;
+            padding: 0;
+        }
+        /* Each of the items in the list */
+
+        .custom-menu li {
+            padding: 8px 12px;
+            cursor: pointer;
+            list-style-type: none;
+            transition: all .3s ease;
+            user-select: none;
+        }
+
+        .custom-menu li:hover {
+            background-color: #DEF;
+        }
+    </style>
+
+
+    <script>
+        // OnLoad
+        $$(document).ready(function () {
+
+            window.url = "show_version_hierachy";
+            window.upload_new_version_url = "upload_new_version";
+            window.version_hierachy = {};       // 以{ver_id, [child_ver_id]}的形式记录版本层级
+            window.version_nodes = new vis.DataSet();
+            window.version_edges = new vis.DataSet();
+            window.current_sel_version_id = null;
+
+            // // 请求版本层级表
+            $$.post(window.url, { "action": "request_version_hierachy" })
+            .done(function (ret) {
+                var ret = JSON.parse(ret);
+                window.version_hierachy = ret["version_hierachy"];
+
+                // 根据版本层级表形成层级表视图所需要的数据
+                for (version_id in window.version_hierachy) {
+                    if (!window.version_hierachy.hasOwnProperty(version_id)) continue;
+                    window.version_nodes.add({
+                        id: parseInt(version_id),
+                        label: 'version_' + version_id.toString(),
+                    });
+                }
+                for (version_id in window.version_hierachy) {
+                    if (!window.version_hierachy.hasOwnProperty(version_id)) continue;
+                    for (var i = 0; i < window.version_hierachy[version_id].length; ++i) {
+                        window.version_edges.add({
+                            from: parseInt(version_id),
+                            to: window.version_hierachy[version_id][i],
+                        });
+                    }
+                }
+                show_version_hierachy();
+            });
+
+            show_version_hierachy();
+
+            // If the menu element is clicked
+            $$(".custom-menu li").click(function(){
+                
+                // This is the triggered action name
+                switch($$(this).attr("data-action")) {
+                    
+                    // A case for each action. Your actions here
+                    case "upload_new_version": upload_new_version(); break;
+                    case "second": alert("second"); break;
+                    case "third": alert("third"); break;
+                }
+            
+                // Hide it AFTER the action was triggered
+                $$(".custom-menu").hide(100);
+            });
+
+        });
+
+        // 创建新的版本
+        function upload_new_version(){
+            var parent_version_id = window.current_sel_version_id;      // 新版本基于的父版本
+            window.open(window.upload_new_version_url + "?parent_version_id="+ parent_version_id);
+        }
+
+        // 展示版本层级表
+        function show_version_hierachy() {
+
+            // 创建一个网络
+            var container = document.getElementById('mynetwork');
+
+            // var nodes = new vis.DataSet([
+            //     {id: 1, label: 'Node 1'},
+            //     {id: 2, label: 'Node 2'},
+            //     {id: 3, label: 'Node 3'},
+            //     {id: 4, label: 'Node 4'},
+            //     {id: 5, label: 'Node 5'}
+            // ]);
+
+            // // 创建关系数组
+            // var edges = new vis.DataSet([
+            //     {from: 1, to: 3},
+            //     {from: 1, to: 2},
+            //     {from: 2, to: 4},
+            //     {from: 2, to: 5}
+            // ]);
+
+            // vis数据
+            var data = {
+                nodes: window.version_nodes,
+                edges: window.version_edges,
+            };
+            // var data = {
+            //     nodes: nodes,
+            //     edges: edges,
+            // };
+            var options = {
+                edges: {
+                    arrows: {
+                        to: { enabled: true, scaleFactor: 1, type: 'arrow' },
+                    }
+                }
+            };
+
+            // 初始化网络
+            var network = new vis.Network(container, data, options);
+
+            network.on("oncontext", function (params) {
+                //console.log(params);
+                if (params.nodes.length > 0){
+                    params.event.preventDefault();
+                    window.current_sel_version_id = params.nodes[0];    // 记录下当前选择的版本ID
+                    $$(".custom-menu").finish().toggle(100);
+                    $$(".custom-menu").css({
+                        top: params.pointer.DOM.y + "px",
+                        left: params.pointer.DOM.x + "px"
+                    });
+                }
+            });
+
+            network.on("click", function (params) {
+                params.event.preventDefault();
+                $$(".custom-menu").hide(100);
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <div id="mynetwork"></div>
+
+    <ul class='custom-menu'>
+        <li data-action="upload_new_version">新建版本</li>
+        <li data-action="second">修改配置</li>
+        <li data-action="third">Third thing</li>
+    </ul>
+</body>
+
+</html>

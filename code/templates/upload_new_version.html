@@ -19,6 +19,22 @@
     <script src="/static/js/js-spark-md5/spark-md5.js"></script>
 
     <script>
+        // 解析URL中的GET参数
+        function getSearchParameters() {
+            var prmstr = window.location.search.substr(1);
+            return prmstr != null && prmstr != "" ? transformToAssocArray(prmstr) : {};
+        }
+        function transformToAssocArray( prmstr ) {
+            var params = {};
+            var prmarr = prmstr.split("&");
+            for ( var i = 0; i < prmarr.length; i++) {
+                var tmparr = prmarr[i].split("=");
+                params[tmparr[0]] = tmparr[1];
+            }
+            return params;
+        }
+        window.GET_PARAMS = getSearchParameters();
+
         // OnLoad
         $$(document).ready(function() {
             window.CONST_INDEX_IN_FILELIST = "INDEX_IN_FILELIST";     // 常量字符串
@@ -37,8 +53,10 @@
             hide_filelist();
 
             // 请求父版本配置
-            $$("#parent_version_submit_btn").on("click", function(){
-                var parent_version_id = $$("#parent_version_id").val();
+            //$$("#parent_version_submit_btn").on("click", function(){
+            //var parent_version_id = $$("#parent_version_id").val();
+            var parent_version_id = window.GET_PARAMS.parent_version_id;
+            if (parent_version_id){
                 // 这里应该验证下ID的合理性
                 $$.post(window.url, {"action":"request_config", "parent_version_id" : parent_version_id})
                 .done(function(ret){
@@ -65,8 +83,9 @@
                     // 配置上传文件按钮
                     show_uploadfile();
                 });
-            });
-
+            }else{
+                alert("父版本ID错误");
+            }
         });
 
         // 初始化上传文件控件
@@ -238,14 +257,6 @@
 </head>
 
 <body>
-    <div class="input-group">
-        <span class="input-group-btn">
-            <button id="parent_version_submit_btn" class="btn btn-default" type="button">
-                提交
-            </button>
-        </span>
-        <input id="parent_version_id" type="text" class="form-control" placeholder="父版本ID">
-    </div><!-- /input-group -->
     <div class="container">
         <div id="toolbar" class="btn-group" role="group" >
             <label class="control-label">请选择目录，程序会对目录所有文件按下表过滤：</label>
