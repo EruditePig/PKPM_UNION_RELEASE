@@ -70,8 +70,8 @@ class DBWrapper(object):
         self.conn.row_factory = sqlite3.Row     # row获取的时候为字典
 
         # 保证以下TABLE永远是存在的
-        self.create_version_list_table()
-        self.create_config_create_log_table()
+        self.__create_version_list_table()
+        self.__create_config_create_log_table()
 
     def __del__(self):
         self.conn.close()
@@ -99,7 +99,7 @@ class DBWrapper(object):
             row = c.fetchone()
             return row[0] == 0
 
-    def create_version_list_table(self):
+    def __create_version_list_table(self):
         """创建版本列表"""
         c = self.conn.cursor()
         stmt = "CREATE TABLE IF NOT EXISTS {0} ({1} INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
@@ -122,7 +122,7 @@ class DBWrapper(object):
         c.execute(stmt)
         self.conn.commit()
 
-    def insert_to_verion_list_table(self, config_table_id, staff_id, parent_ver_id, description):
+    def __insert_to_verion_list_table(self, config_table_id, staff_id, parent_ver_id, description):
         """
         插入一个版本到版本列表
         [IN]
@@ -150,7 +150,7 @@ class DBWrapper(object):
         if not parent_ver_id:   # 父版本为空，则直接返回版本号
             return child_ver_id
         else:   # 更新父版本中的子版本信息
-            parent_version_info = self.get_one_version_info(parent_ver_id)
+            parent_version_info = self.__get_one_version_info(parent_ver_id)
             if parent_version_info:
                 # 更新父版本记录中的子版本号
                 if parent_version_info[DBWrapper.VERSION_LIST_CHILD_VER_ID]:
@@ -177,7 +177,7 @@ class DBWrapper(object):
             else:
                 return None
 
-    def get_version_hierachy(self):
+    def __get_version_list_table(self):
         """
         获得版本列表
         [OUT]
@@ -200,7 +200,7 @@ class DBWrapper(object):
                 version_tree[row[DBWrapper.VERSION_LIST_ID]] = child_id
         return version_tree
 
-    def get_one_version_info(self, version_id):
+    def __get_one_version_info(self, version_id):
         """
         获得某个版本信息
         [IN]
@@ -227,7 +227,7 @@ class DBWrapper(object):
         else:
             return None
 
-    def create_project_group_permission_table(self):
+    def __create_project_group_permission_table(self):
         """
         创建各项目组权限列表
         """
@@ -241,7 +241,7 @@ class DBWrapper(object):
         c.execute(stmt)
         self.conn.commit()
 
-    def insert_to_project_group_permission_table(self, group_name, can_upload, can_edit_config):
+    def __insert_to_project_group_permission_table(self, group_name, can_upload, can_edit_config):
         """
         插入各项目组权限列表
         """
@@ -255,7 +255,7 @@ class DBWrapper(object):
         c.execute(stmt)
         self.conn.commit()
 
-    def create_staff_table(self):
+    def __create_staff_table(self):
         """
         创建人员列表
         """
@@ -270,7 +270,7 @@ class DBWrapper(object):
         c.execute(stmt)
         self.conn.commit()
 
-    def insert_to_staff_table(self, name, project_group_name, state):
+    def __insert_to_staff_table(self, name, project_group_name, state):
         """
         创建人员列表
         project_group_name可以是数组，一个人可以属于多个项目组，用分号分隔
@@ -285,7 +285,7 @@ class DBWrapper(object):
         c.execute(stmt)
         self.conn.commit()
 
-    def create_config_create_log_table(self):
+    def __create_config_create_log_table(self):
         """
         创建配置表的创建记录表
         """
@@ -300,7 +300,7 @@ class DBWrapper(object):
         c.execute(stmt)             # 描述
         self.conn.commit()
 
-    def insert_to_config_create_log_table(self, staff_id, description):
+    def __insert_to_config_create_log_table(self, staff_id, description):
         """
         插入配置文件创建记录表
         [IN]
@@ -320,7 +320,7 @@ class DBWrapper(object):
         self.conn.commit()
         return c.lastrowid
 
-    def get_config_create_log_table(self):
+    def __get_config_create_log_table(self):
         """
         获取所有配置文件记录
         [OUT]
@@ -341,7 +341,7 @@ class DBWrapper(object):
                                                                             DBWrapper.CONFIG_CREATE_LOG_DESCRIPTION : row[DBWrapper.CONFIG_CREATE_LOG_DESCRIPTION]}
         return config_log
 
-    def create_config_table(self, config_id):
+    def __create_config_table(self, config_id):
         """
         创建配置表
         [IN]
@@ -357,22 +357,18 @@ class DBWrapper(object):
         c.execute(stmt)
         self.conn.commit()
 
-    def insert_to_config_table(self, config_id, path, hashstr, filesize, project_group_name):
+    def __insert_to_config_table(self, config_id, path, project_group_name):
         """
         插入配置文件
         [IN]
         config_id - int 配置表id
         path - str 文件路径
-        hashstr - str 文件hash
-        filesize _ int 文件大小
         project_group_name - str 所属团队
         """
-        stmt = "REPLACE INTO {0}{1} VALUES ({2}, {3}, {4}, {5});".format(
+        stmt = "REPLACE INTO {0}{1} VALUES ({2}, {3});".format(
             DBWrapper.CONFIG_DETAIL,
             str(config_id),
             "'" + path.replace('\\', '/') + "'",
-            "'" + hashstr + "'",
-            str(filesize),
             "'" + project_group_name  + "'"
         )
         c = self.conn.cursor()
@@ -389,17 +385,17 @@ class DBWrapper(object):
         [OUT]
         config_id - int 新建的配置表ID
         """
-        config_id = self.insert_to_config_create_log_table(staff_id, description)
-        self.create_config_table(config_id)
+        config_id = self.__insert_to_config_create_log_table(staff_id, description)
+        self.__create_config_table(config_id)
         for filepath in new_config_info:
-            self.insert_to_config_table(
+            self.__insert_to_config_table(
                 config_id,
                 filepath,
                 new_config_info[filepath][DBWrapper.CONFIG_PROJECT_GROUP_NAME]
             )
         return config_id
 
-    def get_config_table(self, config_id):
+    def __get_config_table(self, config_id):
         """
         获取某个配置
         [OUT]
@@ -420,7 +416,7 @@ class DBWrapper(object):
                 }
         return config
 
-    def create_version_detail_table(self, version_id):
+    def __create_version_detail_table(self, version_id):
         """
         创建版本（仅记录相对上个版本的改动）
         """
@@ -436,7 +432,7 @@ class DBWrapper(object):
         c.execute(stmt)
         self.conn.commit()
 
-    def insert_version_table(self, version_id, path, hashvalue, filesize, state):
+    def __insert_version_table(self, version_id, path, hashvalue, filesize, state):
         """
         插入版本（仅记录相对上个版本的改动）
         """
@@ -452,20 +448,20 @@ class DBWrapper(object):
         c.execute(stmt)
         self.conn.commit()
 
-    def create_fill_version_detail_table(self, version_id, version_detail):
+    def __create_fill_version_detail_table(self, version_id, version_detail):
         """
         创建并填充新的版本信息表
         [IN]
         version_id - int 版本号
         version_detail - {filepath : {HASH, FILESIZE, STATE}}
         """
-        self.create_version_detail_table(version_id)
+        self.__create_version_detail_table(version_id)
         for filepath in version_detail:
-            self.insert_version_table(version_id, filepath, version_detail[filepath][DBWrapper.VERSION_DETAIL_HASH],
+            self.__insert_version_table(version_id, filepath, version_detail[filepath][DBWrapper.VERSION_DETAIL_HASH],
                                         version_detail[filepath][DBWrapper.VERSION_DETAIL_FILESIZE], 
                                         version_detail[filepath][DBWrapper.VERSION_DETAIL_STATE])
 
-    def get_version_detail_table(self, version_id):
+    def __get_version_detail_table(self, version_id):
         """
         获得某版本文件列表
         [IN]
@@ -492,7 +488,7 @@ class DBWrapper(object):
         c.close()
         return version_file_list
 
-    def get_file_paths_from_config_table_filter_staff_id(self, config_table, staff_id):
+    def __get_file_paths_from_config_table_filter_staff_id(self, config_table, staff_id):
         """
         根据staff_id查询其在配置文件列表中负责的文件
         """
@@ -530,11 +526,11 @@ class DBWrapper(object):
 
         while True:
             if current_version_id != version_id:
-                current_version_file_list = self.get_version_detail_table(current_version_id)
+                current_version_file_list = self.__get_version_detail_table(current_version_id)
                 self.combine_version_file_list(version_file_list, current_version_file_list)
                 current_version_id = version_path[current_version_id]
             else:
-                current_version_file_list = self.get_version_detail_table(current_version_id)
+                current_version_file_list = self.__get_version_detail_table(current_version_id)
                 self.combine_version_file_list(version_file_list, current_version_file_list)
                 return version_file_list
         return None
@@ -568,13 +564,13 @@ class DBWrapper(object):
         根节点 root_version
         """
         version_path = {}
-        version_info = self.get_one_version_info(version_id)
+        version_info = self.__get_one_version_info(version_id)
         while version_info:
             if version_info[DBWrapper.VERSION_LIST_PARENT_VER_ID]:
                 parent_id = int(version_info[DBWrapper.VERSION_LIST_PARENT_VER_ID])
                 version_path[parent_id] = version_id
                 version_id = parent_id
-                version_info = self.get_one_version_info(version_id)
+                version_info = self.__get_one_version_info(version_id)
             else:       # 当parent_id为空的时候，表示找到根节点了
                 return (version_path, version_id)
         return None     # 如果某个版本的version_info找不到，则表示出错了，返回None
@@ -595,11 +591,11 @@ class DBWrapper(object):
 
         if parent_version_id:
             # 先获得父版本的版本表ID
-            parent_version_info = self.get_one_version_info(parent_version_id)
+            parent_version_info = self.__get_one_version_info(parent_version_id)
             if parent_version_info:
                 # 获得父版本配置表的文件列表
                 config_id = parent_version_info[DBWrapper.VERSION_LIST_CONFIG_TABLE_ID]
-                config_info = self.get_config_table(config_id)
+                config_info = self.__get_config_table(config_id)
 
                 version_detail = {}     # 版本信息表
                 if mod_file_list:
@@ -624,8 +620,8 @@ class DBWrapper(object):
                     for filepath in del_file_list:
                         if filepath in config_info:
                             version_detail[filepath] = {
-                                DBWrapper.VERSION_DETAIL_HASH : del_file_list[filepath][DBWrapper.VERSION_DETAIL_HASH],
-                                DBWrapper.VERSION_DETAIL_FILESIZE : del_file_list[filepath][DBWrapper.VERSION_DETAIL_FILESIZE],
+                                DBWrapper.VERSION_DETAIL_HASH : "",
+                                DBWrapper.VERSION_DETAIL_FILESIZE : 0,
                                 DBWrapper.VERSION_DETAIL_STATE : DBWrapper.FILE_DEL
                             }
 
@@ -648,9 +644,9 @@ class DBWrapper(object):
                     config_id = self.create_fill_config_table(staff_id, description, new_config_info)
 
                 # 在版本列表中创建新的版本
-                version_id = self.insert_to_verion_list_table(config_id, staff_id, parent_version_id, description)
+                version_id = self.__insert_to_verion_list_table(config_id, staff_id, parent_version_id, description)
                 # 创建版本信息表
-                self.create_fill_version_detail_table(version_id, version_detail)
+                self.__create_fill_version_detail_table(version_id, version_detail)
 
                 return (True, version_id)
 
@@ -671,9 +667,9 @@ class DBWrapper(object):
                 }
             config_id = self.create_fill_config_table(staff_id, description, new_config_info)
             # 在版本列表中创建新的版本
-            version_id = self.insert_to_verion_list_table(config_id, staff_id, parent_version_id, description)
+            version_id = self.__insert_to_verion_list_table(config_id, staff_id, parent_version_id, description)
             # 创建版本信息表
-            self.create_fill_version_detail_table(version_id, version_detail)
+            self.__create_fill_version_detail_table(version_id, version_detail)
             return (True, version_id)
 
     def get_filelist(self, parent_version_id, staff_id):
@@ -689,7 +685,7 @@ class DBWrapper(object):
         # 根据配置表ID和用户ID过滤获得剩下的filelist
         # 拿filelist在父版本文件列表中查找对应的HASH和FILESIZE
 
-        version_file_list = self.get_version_detail_table(parent_version_id)
+        version_file_list = self.__get_version_detail_table(parent_version_id)
         filelist = {}
         for filepath in version_file_list:
             filelist[filepath] = {
@@ -706,94 +702,100 @@ class DBWrapper(object):
         [OUT]
         config_info - 配置表 {CONFIG_PATH : {CONFIG_PROJECT_GROUP_NAME}}
         """
-        version_info = self.get_one_version_info(version_id)
+        version_info = self.__get_one_version_info(version_id)
         if version_info:
-            return self.get_config_table(version_info[DBWrapper.VERSION_LIST_CONFIG_TABLE_ID])
+            return self.__get_config_table(version_info[DBWrapper.VERSION_LIST_CONFIG_TABLE_ID])
+    
+    def get_version_hierachy(self):
+        """
+        获得版本层级信息
+        """
+        return self.__get_version_list_table();
+    
+    def populate_db(self):
+        """
+        测试函数：生成一个数据库
+        """
+        # 创建版本列表
+        self.__create_version_list_table()
+        ver1_id = self.__insert_to_verion_list_table(1, 1, None, "版本1：配置表ID=1，用户ID=1，父版本ID为空")
+        ver2_id = self.__insert_to_verion_list_table(1, 2, 1, "版本2：配置表ID=1，用户ID=2，父版本ID为1")
+        ver3_id = self.__insert_to_verion_list_table(2, 2, 2, "版本3：配置表ID=2，用户ID=2，父版本ID为2")
+        ver4_id = self.__insert_to_verion_list_table(2, 3, 2, "版本4：配置表ID=2，用户ID=3，父版本ID为2")
+        print self.get_version_hierachy()
+        print self.__get_one_version_info(ver1_id)
 
-def populate_db(dbname):
-    """
-    生成一个数据库
-    """
-    db = DBWrapper(dbname)
-    # 创建版本列表
-    db.create_version_list_table()
-    ver1_id = db.insert_to_verion_list_table(1, 1, None, "版本1：配置表ID=1，用户ID=1，父版本ID为空")
-    ver2_id = db.insert_to_verion_list_table(1, 2, 1, "版本2：配置表ID=1，用户ID=2，父版本ID为1")
-    ver3_id = db.insert_to_verion_list_table(2, 2, 2, "版本3：配置表ID=2，用户ID=2，父版本ID为2")
-    ver4_id = db.insert_to_verion_list_table(2, 3, 2, "版本4：配置表ID=2，用户ID=3，父版本ID为2")
-    print db.get_version_hierachy()
-    print db.get_one_version_info(ver1_id)
+        # 创建配置创建记录表
+        self.__create_config_create_log_table()
+        config1_id = self.__insert_to_config_create_log_table(1, "用户1创建的配置表1")
+        config2_id = self.__insert_to_config_create_log_table(2, "用户2创建的配置表2")
+        print self.__get_config_create_log_table()
 
-    # 创建配置创建记录表
-    db.create_config_create_log_table()
-    config1_id = db.insert_to_config_create_log_table(1, "用户1创建的配置表1")
-    config2_id = db.insert_to_config_create_log_table(2, "用户2创建的配置表2")
-    print db.get_config_create_log_table()
+        # 创建配置1
+        self.__create_config_table(config1_id)
+        self.__insert_to_config_table(config1_id, "1/1", "建模项目组")
+        self.__insert_to_config_table(config1_id, "1/2", "建模项目组")
+        print self.__get_config_table(config1_id)
 
-    # 创建配置1
-    db.create_config_table(config1_id)
-    db.insert_to_config_table(config1_id, "1/1", "adssadsa", 4567, "建模项目组")
-    db.insert_to_config_table(config1_id, "1/2", "hnjkhnjkadsa", 45679, "建模项目组")
-    print db.get_config_table(config1_id)
+        # 创建版本详细信息
+        self.__create_version_detail_table(ver1_id)
+        self.__insert_version_table(ver1_id, "1/1", "asdasdsa", 123, DBWrapper.FILE_ADD)
+        self.__insert_version_table(ver1_id, "1/2", "gfdfgf", 123, DBWrapper.FILE_ADD)
+        print self.__get_version_detail_table(ver1_id)
 
-    # 创建版本详细信息
-    db.create_version_detail_table(ver1_id)
-    db.insert_version_table(ver1_id, "1/1", "hashvalue", 123, DBWrapper.FILE_ADD)
-    db.insert_version_table(ver1_id, "1/2", "hashvalue", 123, DBWrapper.FILE_ADD)
-    print db.get_version_detail_table(ver1_id)
-
-    # 快捷创建一个版本
-    db.create_new_version_from_file_list(
-        1,   # 父版本号是1
-        {
-            "1/1" : {
-            DBWrapper.VERSION_DETAIL_HASH : "newhashvalue",
-            DBWrapper.VERSION_DETAIL_FILESIZE : 432
-            }
-        },    # mod_file_list
-        {
-            "3/1" : {
-                DBWrapper.VERSION_DETAIL_HASH : "newnewhashvalue",
-                DBWrapper.VERSION_DETAIL_FILESIZE : 498765,
-                DBWrapper.CONFIG_PROJECT_GROUP_NAME : "分析项目组"
-            }
-        },      # add_file_list
-        [
-            "1/2"
-        ],   # del_file_list
-        4, # staff_id
-        "这是通用版本创建接口"        # description
-    )
+        # 快捷创建一个版本
+        self.create_new_version_from_file_list(
+            1,   # 父版本号是1
+            {
+                "1/1" : {
+                DBWrapper.VERSION_DETAIL_HASH : "newhashvalue",
+                DBWrapper.VERSION_DETAIL_FILESIZE : 432
+                }
+            },    # mod_file_list
+            {
+                "3/1" : {
+                    DBWrapper.VERSION_DETAIL_HASH : "newnewhashvalue",
+                    DBWrapper.VERSION_DETAIL_FILESIZE : 498765,
+                    DBWrapper.CONFIG_PROJECT_GROUP_NAME : "分析项目组"
+                }
+            },      # add_file_list
+            [
+                "1/2"
+            ],   # del_file_list
+            4, # staff_id
+            "这是通用版本创建接口"        # description
+        )
     
 if __name__ == '__main__':
 
-    # 生成数据库
-    # populate_db(dbpath)
-
     # 连接数据库
     db = DBWrapper(dbpath)
+
+    # 生成数据库
+    db.populate_db()
+
     config_info = db.get_version_config_info(1)
     print config_info
-    # print db.get_config_table("1")
+    # print db.__get_config_table("1")
     #db.create_version_list_table()
-    #db.create_project_group_permission_table()
-    #db.create_staff_table()
-    #db.create_config_create_log_table()
-    #db.create_config_table("abc")
-    #db.create_version_detail_table(1)
+    #db.__create_project_group_permission_table()
+    #db.__create_staff_table()
+    #db.__create_config_create_log_table()
+    #db.__create_config_table("abc")
+    #db.__create_version_detail_table(1)
 
     # 插入数据库
-    #db.insert_to_verion_list_table("abc", 0, [1,2], "V3.1.5", "测试版")
-    #db.insert_to_verion_list_table("abc", 1, [], "V3.1.5", "测试版")
-    #db.insert_to_project_group_permission_table("产品设计组", True, False)
-    #db.insert_to_staff_table("史建鑫", ["产品设计部", "建模研发部"], "正常")
-    #db.insert_to_config_create_log_table("abc", "2017-08-13 00:20:00", "史建鑫", "应***要求添加")
-    #db.insert_to_config_table("abc", "CFG\\abc", "建模研发部")
-    #db.insert_to_config_table("abc", "CFG\\1232", "结构研发部")
-    #db.insert_version_table(1, "CFG\\abc", "231713", 12150, "添加")
+    #db.__insert_to_verion_list_table("abc", 0, [1,2], "V3.1.5", "测试版")
+    #db.__insert_to_verion_list_table("abc", 1, [], "V3.1.5", "测试版")
+    #db.__insert_to_project_group_permission_table("产品设计组", True, False)
+    #db.__insert_to_staff_table("史建鑫", ["产品设计部", "建模研发部"], "正常")
+    #db.__insert_to_config_create_log_table("abc", "2017-08-13 00:20:00", "史建鑫", "应***要求添加")
+    #db.__insert_to_config_table("abc", "CFG\\abc", "建模研发部")
+    #db.__insert_to_config_table("abc", "CFG\\1232", "结构研发部")
+    #db.__insert_version_table(1, "CFG\\abc", "231713", 12150, "添加")
 
     #version_tree = db.get_version_list() # 输出所有版本
-    #filepaths = db.get_file_paths_from_config_table_filter_staff_id("abc", 1);
+    #filepaths = db.__get_file_paths_from_config_table_filter_staff_id("abc", 1);
     #print filepaths
 
 
