@@ -9,6 +9,7 @@ import sqlite3
 import sys
 import os
 import time
+import hashlib
 
 class DBWrapper(object):
     """数据库Wrapper"""
@@ -581,7 +582,7 @@ class DBWrapper(object):
         [IN]
         parent_version_id - int 父版本号
         mod_file_list - 被修改的文件列表{FILEPATH : {VERSION_DETAIL_HASH, VERSION_DETAIL_FILESIZE}}
-        add_file_list - 被添加的文件列表{FILEPATH : {HASH, FILESIZE, PROJECT_GROUP_NAME}}
+        add_file_list - 被添加的文件列表{FILEPATH : {VERSION_DETAIL_HASH, VERSION_DETAIL_FILESIZE, CONFIG_PROJECT_GROUP_NAME}}
         del_file_list - 待删除文件列表[FILEPATH]
         staff_id - int 用户ID
         description - str 版本描述
@@ -716,8 +717,6 @@ class DBWrapper(object):
         """
         测试函数：生成一个数据库
         """
-        # 创建版本列表
-        self.__create_version_list_table()
         ver1_id = self.__insert_to_verion_list_table(1, 1, None, "版本1：配置表ID=1，用户ID=1，父版本ID为空")
         ver2_id = self.__insert_to_verion_list_table(1, 2, 1, "版本2：配置表ID=1，用户ID=2，父版本ID为1")
         ver3_id = self.__insert_to_verion_list_table(2, 2, 2, "版本3：配置表ID=2，用户ID=2，父版本ID为2")
@@ -726,7 +725,6 @@ class DBWrapper(object):
         print self.__get_one_version_info(ver1_id)
 
         # 创建配置创建记录表
-        self.__create_config_create_log_table()
         config1_id = self.__insert_to_config_create_log_table(1, "用户1创建的配置表1")
         config2_id = self.__insert_to_config_create_log_table(2, "用户2创建的配置表2")
         print self.__get_config_create_log_table()
@@ -765,17 +763,54 @@ class DBWrapper(object):
             4, # staff_id
             "这是通用版本创建接口"        # description
         )
-    
+
+    def create_first_version_from_path(self, folder_path, staff_id, project_group_name):
+        """
+        从文件夹路径创建第一个版本
+        """
+
+        file_list = []          # 所有文件
+        def collect_files(path, file_list):
+            files = os.listdir(path.encode('gbk'))        # 返回一个列表，其中包含在目录条目的名称
+            for f in files:
+                joined_path = os.path.join(path, f)
+                if(os.path.isdir(joined_path.encode('gbk'))):
+                    collect_files(joined_path, file_list)
+                elif(os.path.isfile(joined_path.encode('gbk'))):
+                    file_list.append(joined_path.replace("\\","/"))
+        
+        collect_files(folder_path, file_list)
+        
+        def md5(fname):
+            hash_md5 = hashlib.md5()
+            with open(fname, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            return hash_md5.hexdigest()
+
+        add_file_list = {}
+        for f in file_list:
+            relative_path = f.replace(folder_path, "")
+            add_file_list[relative_path] = {
+                DBWrapper.VERSION_DETAIL_HASH : md5(f.encode('gbk')),
+                DBWrapper.VERSION_DETAIL_FILESIZE : os.path.getsize(f.encode('gbk')),
+                DBWrapper.CONFIG_PROJECT_GROUP_NAME : project_group_name
+            }
+
+        self.create_new_version_from_file_list(None, None, add_file_list, None, staff_id, "第一个版本，从路径直接创建")
+        
+
 if __name__ == '__main__':
 
     # 连接数据库
     db = DBWrapper(dbpath)
+    db.create_first_version_from_path(r'd:/work2/PKPM_UNION_RELEASE/workdir/upload/', 1, "建模项目组")
 
     # 生成数据库
-    db.populate_db()
+    # db.populate_db()
 
-    config_info = db.get_version_config_info(1)
-    print config_info
+    # config_info = db.get_version_config_info(1)
+    # print config_info
     # print db.__get_config_table("1")
     #db.create_version_list_table()
     #db.__create_project_group_permission_table()
