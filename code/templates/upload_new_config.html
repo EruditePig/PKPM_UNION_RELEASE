@@ -42,12 +42,80 @@
         window.TYPE_ROOT = "root folder";
         window.TYPE_FOLDER = "folder";
         window.TYPE_FILE = "file";
+        window.config_info = {};
+        window.config_tree_data_dict = {};
+        window.config_tree_data_list = [];
         window.change_table_data = [];
 
         // OnLoad
         $$(document).ready(function () {
             var parent_version_id = window.GET_PARAMS.parent_version_id;        // 新配置基于的版本
+            if (parent_version_id){
+                // 这里应该验证下ID的合理性
+                $$.post(window.url, {"action":"request_config", "parent_version_id" : parent_version_id})
+                .done(function(ret){
+                    var ret = JSON.parse(ret);
+                    window.config_info = ret["config_info"];
+                    var root_obj = {};
+                    root_obj["id"] = ROOT_NAME;
+                    root_obj["parent"] = "#";
+                    root_obj["text"] = ROOT_NAME;
+                    root_obj["type"] = TYPE_ROOT;
+                    root_obj["state"] = { "opened" : true};
+                    window.config_tree_data_dict[ROOT_NAME] = root_obj;
+                    window.config_tree_data_list.push(root_obj);
+                    for(f in window.config_info){
+                        var a = f.split("/");
+                        for(var i=0; i<a.length; ++i){
+                            var path = a.slice(0,i+1).join("/");
+                            var parent_path = a.slice(0,i).join("/");
+                            var id = Path2ID(path);
+                            var parent_id = Path2ID(parent_path);
+                            if(window.config_tree_data_dict.hasOwnProperty(id)){
+                                // 有该id就什么都不做了
+                            }else{
+                                var obj = {};
+                                obj["id"] = id;
+                                obj["parent"] = parent_id;
+                                obj["text"] = a[i];
+                                if(i === a.length-1){
+                                    obj["type"] = TYPE_FILE;
+                                }else{
+                                    obj["type"] = TYPE_FOLDER;
+                                }
+                                window.config_tree_data_dict[id] = obj;
+                                window.config_tree_data_list.push(obj);
+                            }
+                        }
+                    }
+                    // 显示config_tree
+                    show_config_tree();
+                });
+            }else{
+                alert("父版本ID错误");
+            }
+            
 
+            $$('#config_tree').on("changed.jstree", function (e, data) {
+                //console.log(data.instance.get_selected(true)[0].text);
+                //console.log(data.instance.get_node(data.selected[0]).text);
+            });
+            $$("#s").submit(function(e) {
+                e.preventDefault();
+                $$("#config_tree").jstree(true).search($$("#q").val());
+            });
+
+            $$('#change_table').bootstrapTable({  
+                columns: [
+                    { field : 'STATE', title : 'STATE'},
+                    { field : 'PATH', title : 'Path' },  
+                    { field : 'PROJECT_GROUP_NAME', title : 'Group' },  
+                ],
+            }); 
+        });
+
+        // 显示config_tree
+        function show_config_tree(){
             var tree_arg = {};
             tree_arg['core'] = {
                 "check_callback" : function (operation, node, parent, position, more) {
@@ -58,13 +126,13 @@
                     }
                     return true; // allow everything else
                 },
-                'data' : [
-                    { "id" : ROOT_NAME, "parent" : "#", "text" : ROOT_NAME, "type" : TYPE_ROOT, "state" : { "opened" : true}},
-                    { "id" : ROOT_NAME + "/CFG", "parent" : ROOT_NAME, "text" : "CFG", "type" : TYPE_FOLDER},
-                    { "id" : ROOT_NAME + "/Ribbon", "parent" : ROOT_NAME, "text" : "Ribbon", "type" : "folder" },
-                    { "id" : ROOT_NAME + "/CFG/CFG_PATH", "parent" : ROOT_NAME + "/CFG", "text" : "CFG_PATH", "type" : "file" },
-                    { "id" : ROOT_NAME + "/CFG/pkpm.ini", "parent" : ROOT_NAME + "/CFG", "text" : "pkpm.ini", "type" : "file" },
-                ]
+                'data' : window.config_tree_data_list,
+                // 'data' : {
+                //     "PKPM目录" : { "id" : ROOT_NAME, "parent" : "#", "text" : ROOT_NAME, "type" : TYPE_ROOT, "state" : { "opened" : true}},
+                //     "PKPM目录/CFG" : { "id" : ROOT_NAME + "/CFG", "parent" : ROOT_NAME, "text" : "CFG", "type" : TYPE_FOLDER},
+                //     "PKPM目录/Ribbon" : { "id" : ROOT_NAME + "/Ribbon", "parent" : ROOT_NAME, "text" : "Ribbon", "type" : "folder" },
+                //     "PKPM目录/CFG/CFG_PATH" : { "id" : ROOT_NAME + "/CFG/CFG_PATH", "parent" : ROOT_NAME + "/CFG", "text" : "CFG_PATH", "type" : "file" },
+                // },
             };
             tree_arg['plugins'] = ["contextmenu", "search", "types", "sort", "unique"];
             tree_arg['unique'] = {
@@ -198,31 +266,7 @@
             };
 
             $$('#config_tree').jstree(tree_arg);
-
-            $$('#config_tree').on("changed.jstree", function (e, data) {
-                //console.log(data.instance.get_selected(true)[0].text);
-                //console.log(data.instance.get_node(data.selected[0]).text);
-            });
-            $$("#s").submit(function(e) {
-                e.preventDefault();
-                $$("#config_tree").jstree(true).search($$("#q").val());
-            });
-            $$("#test_btn").on("click", function(){
-                var tree = $$("#config_tree").jstree(true);
-                var node = tree.get_node("ajson4");
-                tree.select_node(node);
-                tree.delete_node(node);
-            });
-
-
-            $$('#change_table').bootstrapTable({  
-                columns: [
-                    { field : 'STATE', title : 'STATE'},
-                    { field : 'PATH', title : 'Path' },  
-                    { field : 'PROJECT_GROUP_NAME', title : 'Group' },  
-                ],
-            }); 
-        });
+        }
 
         // id变为path
         function ID2Path(id){
@@ -231,7 +275,12 @@
 
         // path变ID
         function Path2ID(path){
-            return ROOT_NAME + '/' + path;
+            if(path){
+                return ROOT_NAME + '/' + path;
+            }
+            else{
+                return ROOT_NAME;
+            }
         }
 
         // 重新加载表格
