@@ -110,6 +110,21 @@
                     { field : 'STATE', title : 'STATE'},
                     { field : 'PATH', title : 'Path' },  
                     { field : 'PROJECT_GROUP_NAME', title : 'Group' },  
+                    { 
+                        title : 'Method',
+                        formatter : function(value, row, index){
+                            if (row[CHANGE_STATE] === CHANGE_STATE_ADD){
+                                return [
+                                    '<label for="upload">选择文件',
+                                    '<span class="glyphicon glyphicon-file" aria-hidden="true"></span>',
+                                    '<input type="file" id="upload" ',
+                                    'onchange = "select_add_file(this.files,' + "'" + row[CHANGE_PATH] + "'" + ')"',
+                                    ' style="display:none">',
+                                    '</label>',
+                                ].join('');
+                            }
+                        },
+                    },  
                 ],
             }); 
         });
@@ -321,6 +336,10 @@
             window.change_table_data.push(obj);
         }
 
+        // 表格中添加文件的行选择文件
+        function select_add_file(files, path){
+            console.log(files[0], path);
+        }
     </script>
 </head>
 

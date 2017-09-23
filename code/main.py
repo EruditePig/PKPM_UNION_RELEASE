@@ -27,9 +27,14 @@ urls = (
     '/show_version_hierachy', 'show_version_hierachy',
 )
 
-app = web.application(urls, globals())
+class MyApplication(web.application):
+    def run(self, port=8080, *middleware):
+        func = self.wsgifunc(*middleware)
+        return web.httpserver.runsimple(func, ('0.0.0.0', port))
+
+app = MyApplication(urls, globals())
 
 if __name__=='__main__':
     # application = app.wsgifunc()
     # pywsgi.WSGIServer(("", 8080), application).serve_forever()
-    app.run()
+    app.run(port = 3744)
