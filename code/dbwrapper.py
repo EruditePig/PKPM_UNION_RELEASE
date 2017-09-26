@@ -804,7 +804,7 @@ if __name__ == '__main__':
 
     # 连接数据库
     db = DBWrapper(dbpath)
-    db.create_first_version_from_path(r'd:/work2/PKPM_UNION_RELEASE/workdir/upload/', 1, "建模项目组")
+    db.create_first_version_from_path(r'../workdir/root/', 1, "建模项目组")
 
     # 生成数据库
     # db.populate_db()
